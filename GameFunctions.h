@@ -1,6 +1,8 @@
 #pragma once
 
 #include "skse64_common\Relocation.h"
+
+#include "skse64/GameObjects.h"
 #include "skse64/GameExtraData.h"
 
 class TESObjectREFR;
@@ -50,3 +52,7 @@ typedef bool InventoryEntryData_IsQuestItem_t(InventoryEntryData* o);
 
 extern RelocAddr<InventoryEntryData_IsOwnedBy_t*>		 InventoryEntryData_IsOwnedBy;
 extern RelocAddr<InventoryEntryData_IsQuestItem_t*>		 InventoryEntryData_IsQuestItem;
+
+// Magicitem::
+typedef MagicItem::EffectItem* MagicItem_GetCostliestEffectItem_t(MagicItem* o, int arg1, bool arg2);
+extern RelocAddr<MagicItem_GetCostliestEffectItem_t*>	 MagicItem_GetCostliestEffectItem;

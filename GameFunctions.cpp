@@ -17,8 +17,8 @@ RelocAddr<TESForm_GetOwner_t*> TESForm_GetOwner (0x002A6740);
 // 48 85 C9 0F 84 C1 00 00 00 0F B6 41 1A 83 C0 E9 83 F8 1D 0F 87 B1 00 00 00 -0x16
 RelocAddr<TESForm_GetWeight_t*>  TESForm_GetWeight (0x001A1800);
 
-// TODO: FIND THIS BITCH
-RelocAddr<TESForm_LookupFormByID_t*>   TESForm_LookupFormByID ();
+// 48 85 D2 74 2F 8B 4B 0C FF C9 8B 44 24 48 48 23 C8 48 8D 04 49 48 8D 04 C2 48 83 78 10 00 74 14 -0x4C
+RelocAddr<TESForm_LookupFormByID_t*>   TESForm_LookupFormByID (0x00194300);
 
 /*
 00007FF7295D72F0 | 48 8D 15 B9 61 2F 01         | lea rdx,qword ptr ds:[7FF72A8CD4B0]                      | 7FF72A8CD4B0:"Found ReferenceHandle extra on invalid %s ref '%s' (%08X)"
@@ -77,7 +77,10 @@ RelocAddr<BaseExtraList_SetInventoryChanges_t*> BaseExtraList_SetInventoryChange
 RelocAddr<BaseExtraList_GetItemCount_t*>	    BaseExtraList_GetItemCount (0x001138B0);
 
 // 48 8B F0 48 85 C0 75 04 48 8B 73 40 33 C0 80 7E 1A 2B 48 0F 44 C6 48 3B EE 0F 84 80 00 00 00 80 7D 1A 0B -0x4D
-RelocAddr<InventoryEntryData_IsOwnedBy_t*>		 InventoryEntryData_IsOwnedBy (0x001D76C0);
+RelocAddr<InventoryEntryData_IsOwnedBy_t*>		InventoryEntryData_IsOwnedBy (0x001D76C0);
 
 // 48 8B 59 08 40 32 FF 48 85 DB 74 4A 48 89 74 24 30 0F 1F 44 00 00 48 83 7B 08 00 75 06 -0xA
-RelocAddr<InventoryEntryData_IsQuestItem_t*>		 InventoryEntryData_IsQuestItem (0x001D6CD0);
+RelocAddr<InventoryEntryData_IsQuestItem_t*>    InventoryEntryData_IsQuestItem (0x001D6CD0);
+
+// 49 89 5B 10 49 89 73 18 33 C0 49 89 43 D8 -0x10
+RelocAddr<MagicItem_GetCostliestEffectItem_t*>	 MagicItem_GetCostliestEffectItem (0x00101DC0);
