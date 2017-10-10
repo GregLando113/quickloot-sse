@@ -169,7 +169,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\skse64\GameAPI.cpp" />
+    <ClCompile Include="..\skse64\GameBSExtraData.cpp" />
+    <ClCompile Include="..\skse64\GameData.cpp" />
+    <ClCompile Include="..\skse64\GameExtraData.cpp" />
+    <ClCompile Include="..\skse64\GameFormComponents.cpp" />
+    <ClCompile Include="..\skse64\GameForms.cpp" />
+    <ClCompile Include="..\skse64\GameReferences.cpp" />
+    <ClCompile Include="..\skse64\GameRTTI.cpp" />
     <ClCompile Include="..\skse64\GameTypes.cpp" />
+    <ClCompile Include="..\skse64\HashUtil.cpp" />
+    <ClCompile Include="..\skse64\NiNodes.cpp" />
     <ClCompile Include="GameFunctions.cpp" />
     <ClCompile Include="ItemData.cpp" />
     <ClCompile Include="QuickLoot.cpp" />

@@ -134,6 +134,7 @@ struct ItemData
 
 
 	// constractors
+	ItemData() {}
 	ItemData(InventoryEntryData *a_pEntry, TESForm *owner);
 	ItemData(const ItemData &rhs);
 	ItemData(ItemData &&rhs);

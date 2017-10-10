@@ -55,5 +55,32 @@
     <ClCompile Include="ItemData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\skse64\GameReferences.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameExtraData.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameBSExtraData.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\NiNodes.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameRTTI.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameForms.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameData.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\HashUtil.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameFormComponents.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

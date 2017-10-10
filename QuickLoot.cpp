@@ -78,7 +78,6 @@ QuickLoot::Update()
 	items_.Clear();
 
 	UInt32 numItems = TESObjectREFR_GetInventoryItemCount(containerRef_, false, false);
-	printf("numItems = %d\n", numItems);
 
 	if (numItems > items_.capacity)
 	{
@@ -90,8 +89,6 @@ QuickLoot::Update()
 	if (containerRef_->GetFormType() != kFormType_Character)
 	{
 		ownerForm_ = TESForm_GetOwner(containerRef_);
-		if(ownerForm_)
-			printf("owner=%p (%s)\n", ownerForm_, GetFormName(ownerForm_));
 	}
 
 	TESContainer* container = nullptr;
@@ -140,7 +137,7 @@ QuickLoot::Update()
 
 	if (changes->objList)
 	{
-		for(auto it = changes->objList->Begin(); it.End(); it++)
+		for(auto it = changes->objList->Begin(); it.End(); it.operator++())
 		{
 			auto pEntry = *it;
 			if (!pEntry)
@@ -168,7 +165,7 @@ QuickLoot::Update()
 			InventoryEntryData *defaultEntry = nullptr;
 			if (item->formID != 0xF && pEntry->extendDataList)
 			{
-				for (auto kt = pEntry->extendDataList->Begin(); kt.End(); kt++)
+				for (auto kt = pEntry->extendDataList->Begin(); kt.End(); kt.operator++())
 				{
 					auto extraList = *kt;
 					if (!extraList)
@@ -276,6 +273,18 @@ QuickLoot::Update()
 #endif
 }
 
+void
+QuickLoot::Dbg_PrintItems()
+{
+	printf("ITEMS ========== Sz: %d\n", items_.count);
+	for (UInt32 i = 0; i < items_.count; ++i)
+	{
+		auto& item = items_[i];
+		printf(" %d - [%p] %s (%d)\n", i, item.pEntry, item.GetName(), item.GetCount());
+	}
+	printf("ENDITEMS ============\n");
+}
+
 EventResult 
 QuickLoot::ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrosshairRefEvent> * dispatcher)
 {
@@ -293,6 +302,8 @@ QuickLoot::ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrossha
 		containerRef_ = ref;
 
 		Update();
+
+		Dbg_PrintItems();
 	}
 	else
 	{

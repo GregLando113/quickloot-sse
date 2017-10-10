@@ -16,6 +16,8 @@ public:
 	void Initialize();
 
 	void Update();
+
+	void Dbg_PrintItems();
 private:
 
 	EventResult ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrosshairRefEvent> * dispatcher) override;
