@@ -8,6 +8,36 @@
 // -0x13
 RelocAddr<TESObjectREFR_GetInventoryItemCount_t*> TESObjectREFR_GetInventoryItemCount (0x0028E320);
 
+/*
+00007FF644240DC7 | 48 C7 44 24 30 00 00 00 00   | mov qword ptr ss:[rsp+30],0                              |
+00007FF644240DD0 | 48 8D 54 24 30               | lea rdx,qword ptr ss:[rsp+30]                            |
+00007FF644240DD5 | 48 8B C8                     | mov rcx,rax                                              |
+00007FF644240DD8 | E8 E3 23 89 FF               | call skyrimse.7FF643AD31C0                               | < =================== TESObjectREFR_LookupRefByHandle
+00007FF644240DDD | 90                           | nop                                                      |
+00007FF644240DDE | 48 8B 5C 24 30               | mov rbx,qword ptr ss:[rsp+30]                            |
+00007FF644240DE3 | 48 85 DB                     | test rbx,rbx                                             |
+00007FF644240DE6 | 74 3A                        | je skyrimse.7FF644240E22                                 |
+00007FF644240DE8 | 45 33 C0                     | xor r8d,r8d                                              |
+00007FF644240DEB | 48 8B 15 66 F6 5B 02         | mov rdx,qword ptr ds:[7FF646800458]                      |
+00007FF644240DF2 | 48 8B CB                     | mov rcx,rbx                                              |
+00007FF644240DF5 | E8 76 C3 C5 FF               | call skyrimse.7FF643E9D170                               |
+00007FF644240DFA | 8B 83 E0 00 00 00            | mov eax,dword ptr ds:[rbx+E0]                            |
+00007FF644240E00 | C1 E8 1E                     | shr eax,1E                                               |
+00007FF644240E03 | A8 01                        | test al,1                                                |
+00007FF644240E05 | 75 35                        | jne skyrimse.7FF644240E3C                                |
+00007FF644240E07 | 45 33 C9                     | xor r9d,r9d                                              |
+00007FF644240E0A | 4C 8B 05 47 F6 5B 02         | mov r8,qword ptr ds:[7FF646800458]                       |
+00007FF644240E11 | 48 8B D3                     | mov rdx,rbx                                              |
+00007FF644240E14 | 48 8B 8B F0 00 00 00         | mov rcx,qword ptr ds:[rbx+F0]                            |
+00007FF644240E1B | E8 90 D7 CC FF               | call skyrimse.7FF643F0E5B0                               |
+00007FF644240E20 | EB 1A                        | jmp skyrimse.7FF644240E3C                                |
+00007FF644240E22 | 48 8B 07                     | mov rax,qword ptr ds:[rdi]                               |
+00007FF644240E25 | 41 B9 01 00 00 00            | mov r9d,1                                                |
+00007FF644240E2B | 44 8B C6                     | mov r8d,esi                                              |
+00007FF644240E2E | 48 8D 15 4B 21 D7 00         | lea rdx,qword ptr ds:[7FF644FB2F80]                      | 7FF644FB2F80:"No nearby NPC found to sound alarm, alarm aborted."
+00007FF644240E35 | 48 8B CF                     | mov rcx,rdi                                              |
+00007FF644240E38 | FF 50 10                     | call qword ptr ds:[rax+10]                               |*/
+RelocAddr<TESObjectREFR_LookupRefByHandle_t*>     TESObjectREFR_LookupRefByHandle   (0x002131C0);
 
 // \x48\x0F\x44\xD6\x48\x85\xD2\x0F\x85\x00\x00\x00\x00\x48\x85\xC0\x0F\x85
 // xxxxxxxxx????xxxxx

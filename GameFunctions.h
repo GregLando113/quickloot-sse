@@ -19,6 +19,10 @@ class TESForm;
 typedef UInt32 TESObjectREFR_GetInventoryItemCount_t(TESObjectREFR* o, bool u1, bool u2);
 extern RelocAddr<TESObjectREFR_GetInventoryItemCount_t*> TESObjectREFR_GetInventoryItemCount;
 
+// static TESObjectREFR::
+typedef bool TESObjectREFR_LookupRefByHandle_t(const UInt32 &refHandle,TESObjectREFR* &managedOut);
+extern RelocAddr<TESObjectREFR_LookupRefByHandle_t*>     TESObjectREFR_LookupRefByHandle;
+
 // TESForm::
 typedef TESForm* TESForm_GetOwner_t(TESForm* o);
 typedef double   TESForm_GetWeight_t(TESForm* o);

@@ -7,6 +7,14 @@
 
 QuickLoot g_quickloot;
 
+class ExtraDroppedItemList : public BSExtraData
+{
+public:
+	virtual ~ExtraDroppedItemList();					// 00416BB0
+	tList<UInt32>	handles;	// 08
+private:
+};
+
 #define EVENT_REQUIRE(expr) if(! (expr) ) return kEvent_Continue
 
 static char* GetFormName(TESForm* form)
@@ -220,42 +228,44 @@ QuickLoot::Update()
 	//================================
 	for (auto &node : itemMap)
 	{
-		if (node.value <= 0)
+		if (node.second <= 0)
 			continue;
 
-		if (!IsValidItem(node.key))
+		if (!IsValidItem(node.first))
 			continue;
 
-		InventoryEntryData *entry = new InventoryEntryData(node.key, node.value);
-		m_items.emplace_back(entry, m_owner);
+		InventoryEntryData *entry = new InventoryEntryData(node.first, node.second);
+		items_.Push(ItemData(entry, ownerForm_));
 	}
 
 	//================================
 	// dropped items
 	//================================
-	ExtraDroppedItemList *exDroppedItemList = m_containerRef->extraData.GetExtraData<ExtraDroppedItemList>();
+	ExtraDroppedItemList *exDroppedItemList = reinterpret_cast<ExtraDroppedItemList*>(containerRef_->extraData.GetByType(kExtraData_DroppedItemList));
 	if (exDroppedItemList)
 	{
-		for (RefHandle handle : exDroppedItemList->handles)
+		//for (UInt32 handle : exDroppedItemList->handles.)
+		for(UInt32 i = 0; i < exDroppedItemList->handles.Count(); ++i)
 		{
-			if (handle == g_invalidRefHandle)
+			UInt32* handle = exDroppedItemList->handles.GetNthItem(i);
+			if (handle && *handle == *g_invalidRefHandle)
 				continue;
 
 			TESObjectREFR* refPtr;
-			if (!TESObjectREFR::LookupByHandle(handle, refPtr))
+			if (!TESObjectREFR_LookupRefByHandle(*handle, refPtr))
 				continue;
 
 			if (!IsValidItem(refPtr->baseForm))
 				continue;
 
 			InventoryEntryData *entry = new InventoryEntryData(refPtr->baseForm, 1);
-			entry->AddEntryList(&refPtr->extraData);
-			m_items.emplace_back(entry, m_owner);
+			AddEntryList(entry, const_cast<BaseExtraList*>(&refPtr->extraData));
+			items_.Push(ItemData(entry, ownerForm_));
 		}
 	}
 
-
-	if (!m_items.empty())
+#if 0
+	if (items_.count != 0)
 	{
 		Sort();
 	}
@@ -263,6 +273,7 @@ QuickLoot::Update()
 	InvokeScaleform_Open();
 
 	m_bUpdateRequest = false;
+#endif
 }
 
 EventResult 
