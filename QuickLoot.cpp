@@ -72,10 +72,17 @@ QuickLoot::Initialize()
 	crosshairrefdispatch->AddEventSink(this);
 }
 
+static void __chk(const char* file, const char* func, int line)
+{
+	_MESSAGE("%s (%d): %s\n", file, line, func);
+}
+#define chk() __chk(__FILE__,__FUNCSIG__,__LINE__)
+
 void
 QuickLoot::Update()
 {
 	items_.Clear();
+	
 
 	UInt32 numItems = TESObjectREFR_GetInventoryItemCount(containerRef_, false, false);
 
@@ -84,13 +91,13 @@ QuickLoot::Update()
 		items_.Resize(numItems);
 	}
 
-
+	
 	ownerForm_ = nullptr;
 	if (containerRef_->GetFormType() != kFormType_Character)
 	{
 		ownerForm_ = TESForm_GetOwner(containerRef_);
 	}
-
+	
 	TESContainer* container = nullptr;
 	if (containerRef_->baseForm->GetFormType() == kFormType_Container)
 		container = &dynamic_cast<TESObjectCONT*>(containerRef_->baseForm)->container;
@@ -104,7 +111,7 @@ QuickLoot::Update()
 	// TODO: Please optimize this, std::map is shit
 	std::map<TESForm*, SInt32> itemMap;
 
-
+	
 	TESContainer::Entry *entry;
 	for (UInt32 i = 0; i < container->numEntries; ++i)
 	{
@@ -118,12 +125,13 @@ QuickLoot::Update()
 		itemMap[entry->form] = entry->count;
 	}
 
+	
 	//================================
 	// changes
 	//================================
 	ExtraContainerChanges* exChanges = static_cast<ExtraContainerChanges*>(containerRef_->extraData.GetByType(kExtraData_ContainerChanges));
 	ExtraContainerChanges::Data* changes = (exChanges) ? exChanges->data : nullptr;
-
+	
 	if (!changes)
 	{
 		_MESSAGE("FORCES CONTAINER TO SPAWN");
@@ -134,7 +142,7 @@ QuickLoot::Update()
 		BaseExtraList_SetInventoryChanges(&containerRef_->extraData, changes);
 		ECCData_InitContainer(changes);
 	}
-
+	
 	if (changes->objList)
 	{
 		for(auto it = changes->objList->Begin(); it.End(); it.operator++())
@@ -200,6 +208,7 @@ QuickLoot::Update()
 
 					if (pNewEntry)
 					{
+						
 						items_.Push(ItemData(pNewEntry,ownerForm_)); //emplace_back(pNewEntry, ownerForm_);
 					}
 				}
@@ -219,22 +228,29 @@ QuickLoot::Update()
 			}
 		}
 	}
-
+	
 	//================================
 	// default items that were not processed
 	//================================
+	for (auto idx = itemMap.begin(); idx != itemMap.end(); ++idx)
+	{
+		auto& node = *idx;
+	}
 	for (auto &node : itemMap)
 	{
+		
 		if (node.second <= 0)
 			continue;
-
+		
 		if (!IsValidItem(node.first))
 			continue;
-
+		
 		InventoryEntryData *entry = new InventoryEntryData(node.first, node.second);
+		
 		items_.Push(ItemData(entry, ownerForm_));
+		
 	}
-
+	
 	//================================
 	// dropped items
 	//================================
@@ -260,17 +276,41 @@ QuickLoot::Update()
 			items_.Push(ItemData(entry, ownerForm_));
 		}
 	}
+	
 
-#if 0
 	if (items_.count != 0)
 	{
 		Sort();
 	}
 
+#if 0
 	InvokeScaleform_Open();
 
 	m_bUpdateRequest = false;
 #endif
+}
+
+void 
+QuickLoot::Sort()
+{
+	chk();
+	qsort(items_.entries, items_.count, sizeof(ItemData), [](const void *pA, const void *pB) -> int {
+
+		if (!pA)
+			return -1;
+		if (!pB)
+			return 1;
+
+		chk();
+		const ItemData &a = *(const ItemData *)pA;
+		const ItemData &b = *(const ItemData *)pB;
+		chk();
+		if (a.pEntry == b.pEntry)
+			return 0;
+		chk();
+		return (a < b) ? -1 : 1;
+	});
+	chk();
 }
 
 void

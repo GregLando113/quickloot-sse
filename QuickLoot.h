@@ -16,6 +16,7 @@ public:
 	void Initialize();
 
 	void Update();
+	void Sort();
 
 	void Dbg_PrintItems();
 private:

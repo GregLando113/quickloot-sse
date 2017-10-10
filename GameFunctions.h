@@ -51,9 +51,11 @@ extern RelocAddr<BaseExtraList_SetInventoryChanges_t*>   BaseExtraList_SetInvent
 extern RelocAddr<BaseExtraList_GetItemCount_t*>			 BaseExtraList_GetItemCount;
 
 // InventoryEntryData::
+typedef TESForm* InventoryEntryData_GetOwner_t(InventoryEntryData* o);
 typedef bool InventoryEntryData_IsOwnedBy_t(InventoryEntryData* o, TESForm *actor, TESForm *itemOwner, bool unk1);
 typedef bool InventoryEntryData_IsQuestItem_t(InventoryEntryData* o);
 
+extern RelocAddr<InventoryEntryData_GetOwner_t*>		 InventoryEntryData_GetOwner;
 extern RelocAddr<InventoryEntryData_IsOwnedBy_t*>		 InventoryEntryData_IsOwnedBy;
 extern RelocAddr<InventoryEntryData_IsQuestItem_t*>		 InventoryEntryData_IsQuestItem;
 

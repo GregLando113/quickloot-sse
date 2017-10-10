@@ -106,6 +106,9 @@ RelocAddr<BaseExtraList_SetInventoryChanges_t*> BaseExtraList_SetInventoryChange
 // 48 85 FF 74 06 0F B7 47 10 EB 05 B8 01 00 00 00 48 8B 5C 24 48 48 83 C4 30 5F C3 -0x47
 RelocAddr<BaseExtraList_GetItemCount_t*>	    BaseExtraList_GetItemCount (0x001138B0);
 
+// 48 8B 59 08 48 85 DB 74 22 48 8B 1B 48 85 DB 74 1A 48 8B CB (first match)
+RelocAddr<InventoryEntryData_GetOwner_t*>		 InventoryEntryData_GetOwner (0x001D6750);
+
 // 48 8B F0 48 85 C0 75 04 48 8B 73 40 33 C0 80 7E 1A 2B 48 0F 44 C6 48 3B EE 0F 84 80 00 00 00 80 7D 1A 0B -0x4D
 RelocAddr<InventoryEntryData_IsOwnedBy_t*>		InventoryEntryData_IsOwnedBy (0x001D76C0);
 

@@ -110,6 +110,11 @@ static const char * strIcons[] = {
 	"misc_dragonclaw"
 };
 
+static void chk(const char* file, const char* func, int line)
+{
+	printf("%s (%d): %s\n", file, line, func);
+}
+
 ItemData::ItemData(InventoryEntryData *a_pEntry, TESForm *owner) : pEntry(a_pEntry), type(Type::kType_None), priority(0), name(),
 isStolen(false), isEnchanted(false), isQuestItem(false)
 {
@@ -117,15 +122,15 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 		return;
 
 	TESForm *form = pEntry->type;
-
+	
 	// set type
 	type = GetItemType(form);
 
-
+	
 	// set name
 	name = CALL_MEMBER_FN(pEntry, GenerateName)(); // pEntry->GenerateName();
 
-
+	
 	// set isEnchanted
 	if (form->IsArmor() || form->IsWeapon())
 	{
@@ -136,19 +141,17 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 			if (exEnchant && exEnchant->enchant)
 				isEnchanted = true;
 		}
-
+		
 		TESEnchantableForm *enchantForm = dynamic_cast<TESEnchantableForm *>(pEntry->type);
 		if (enchantForm && enchantForm->enchantment)
 			isEnchanted = true;
 	}
 
-
 	// set isStolen
-	TESForm *itemOwner = TESForm_GetOwner(form); //pEntry->GetOwner();
+	TESForm *itemOwner = InventoryEntryData_GetOwner(pEntry); //pEntry->GetOwner();
 	if (!itemOwner)
 		itemOwner = owner;
 	isStolen = InventoryEntryData_IsOwnedBy(pEntry, *g_thePlayer, itemOwner, true);//!pEntry->IsOwnedBy(g_thePlayer, itemOwner, true);
-
 
 	// set isQuestItem
 	isQuestItem = InventoryEntryData_IsQuestItem(pEntry); // pEntry->IsQuestItem();
@@ -173,7 +176,7 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 		Other,
 		Food = Other
 	};
-
+	
 	switch (form->formType)
 	{
 	case kFormType_Ammo:
@@ -228,6 +231,7 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 	default:
 		priority = Other;
 	}
+	
 }
 
 

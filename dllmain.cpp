@@ -6,6 +6,8 @@
 
 #include "QuickLoot.h"
 
+IDebugLog gLog("qldbg.txt");
+
 SKSEMessagingInterface* g_messaging;
 SKSEScaleformInterface* g_scaleform;
 
