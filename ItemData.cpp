@@ -115,6 +115,11 @@ static void chk(const char* file, const char* func, int line)
 	printf("%s (%d): %s\n", file, line, func);
 }
 
+static char* GetFormName(TESForm* form)
+{
+	return *(char**)((uintptr_t)form + 0x28);
+}
+
 ItemData::ItemData(InventoryEntryData *a_pEntry, TESForm *owner) : pEntry(a_pEntry), type(Type::kType_None), priority(0), name(),
 isStolen(false), isEnchanted(false), isQuestItem(false)
 {
@@ -128,7 +133,7 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 
 	
 	// set name
-	name = CALL_MEMBER_FN(pEntry, GenerateName)(); // pEntry->GenerateName();
+	name = CALL_MEMBER_FN(pEntry,GenerateName)(); // pEntry->GenerateName();
 
 	
 	// set isEnchanted
@@ -250,7 +255,7 @@ isStolen(rhs.isStolen), isEnchanted(rhs.isEnchanted), isQuestItem(rhs.isQuestIte
 ItemData::~ItemData()
 {
 	if (pEntry)
-		delete pEntry;
+		pEntry->Delete();
 }
 
 

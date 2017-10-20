@@ -4,6 +4,8 @@
 #include <cstdio>
 #include "skse64/PluginAPI.h"
 
+
+#include "dbg.h"
 #include "QuickLoot.h"
 
 IDebugLog gLog("qldbg.txt");
@@ -31,12 +33,6 @@ extern "C"
 	__declspec(dllexport) bool SKSEPlugin_Load(const SKSEInterface * skse)
 	{
 
-		AllocConsole();
-		freopen("CONOUT$", "w", stdout);
-
-		HWND hCon = GetConsoleWindow();
-		SetWindowPos(hCon, HWND_TOPMOST, 1920 + 20, 1080 + 20, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-
 		g_messaging = (SKSEMessagingInterface*)skse->QueryInterface(kInterface_Messaging);
 		g_scaleform = (SKSEScaleformInterface*)skse->QueryInterface(kInterface_Scaleform);
 
@@ -50,3 +46,21 @@ extern "C"
 		return true;
 	}
 };
+
+#if BLD_DEBUG
+BOOL WINAPI DllMain(HMODULE hMod, DWORD dwReason, LPVOID)
+{
+	if (dwReason == DLL_PROCESS_ATTACH)
+	{
+		AllocConsole();
+		freopen("CONOUT$", "w", stdout);
+		HWND con = GetConsoleWindow();
+		SetWindowPos(con, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	}
+	else if (dwReason == DLL_PROCESS_DETACH)
+	{
+		FreeConsole();
+	}
+	return TRUE;
+}
+#endif

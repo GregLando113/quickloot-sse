@@ -2,9 +2,10 @@
 
 #include "Interfaces.h"
 #include "GameFunctions.h"
+#include "dbg.h"
 
-#include <map>
 
+SimpleLock QuickLoot::tlock_;
 QuickLoot g_quickloot;
 
 class ExtraDroppedItemList : public BSExtraData
@@ -64,6 +65,99 @@ static void AddEntryList(InventoryEntryData * newentry,BaseExtraList* list)
 	newentry->extendDataList->Push(list);
 }
 
+template <typename _Key, typename _Val>
+class ItemMap
+{
+public:
+
+	struct iterator
+	{
+		bool next(_Key* k, _Val* v)
+		{
+			bool cont = kcur != end;
+			if (cont)
+			{
+				*k = *kcur;
+				*v = *vcur;
+				kcur++;
+				vcur++;
+			}
+			return cont;
+		}
+
+		_Key* kcur;
+		_Val* vcur;
+		_Key* end;
+	};
+
+
+	ItemMap(size_t cap)
+	{
+		base_ = Heap_Allocate((cap * sizeof(_Key)) + (cap * sizeof(_Val)));
+		keyBase_ = reinterpret_cast<_Key*>(base_);
+		valBase_ = reinterpret_cast<_Val*>(keyBase_ + cap);
+		capacity_ = cap;
+	}
+
+	~ItemMap()
+	{
+		Heap_Free(base_);
+	}
+
+	void Add(const _Key& key, const _Val& val)
+	{
+		keyBase_[count_] = key;
+		valBase_[count_] = val;
+		count_++;
+	}
+
+	bool Set(const _Key& key,const _Val& val)
+	{
+		for (size_t i = 0; i < count_; ++i)
+		{
+			if (keyBase_[i] == key)
+			{
+				valBase_[i] = val;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool Get(const _Key& key, _Val* val)
+	{
+		for (size_t i = 0; i < count_; ++i)
+		{
+			if (keyBase_[i] == key)
+			{
+				*val = valBase_[i];
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	iterator&& begin()
+	{
+		return iterator{ keyBase_ , valBase_, keyBase_ + count_ };
+	}
+
+private:
+	void*  base_;
+	_Key*  keyBase_;
+	_Val*  valBase_;
+
+	size_t capacity_;
+	size_t count_;
+};
+
+template <typename T>
+bool traverse(tArray<T>& arr,UInt32* idx, T** out)
+{
+	*out = &arr[(*(idx))++];
+	return *idx < arr.count;
+}
 
 void
 QuickLoot::Initialize()
@@ -72,23 +166,23 @@ QuickLoot::Initialize()
 	crosshairrefdispatch->AddEventSink(this);
 }
 
-static void __chk(const char* file, const char* func, int line)
-{
-	_MESSAGE("%s (%d): %s\n", file, line, func);
-}
-#define chk() __chk(__FILE__,__FUNCSIG__,__LINE__)
-
 void
 QuickLoot::Update()
 {
-	items_.Clear();
-	
+	//SimpleLocker lock(&tlock_);
+	D_VAR(items_.count, "%d");
+	D_MSG("Quickloot::Update() START");
+	items_.count = 0;
+
+	D_VAR(items_.count, "%d");
 
 	UInt32 numItems = TESObjectREFR_GetInventoryItemCount(containerRef_, false, false);
-
+	D_VAR(numItems, "%d");
+	D_VAR(items_.capacity, "%d");
 	if (numItems > items_.capacity)
 	{
-		items_.Resize(numItems);
+		items_.Allocate(numItems);
+		items_.count = 0;
 	}
 
 	
@@ -96,6 +190,7 @@ QuickLoot::Update()
 	if (containerRef_->GetFormType() != kFormType_Character)
 	{
 		ownerForm_ = TESForm_GetOwner(containerRef_);
+		D_VAR(ownerForm_, "%p");
 	}
 	
 	TESContainer* container = nullptr;
@@ -107,11 +202,10 @@ QuickLoot::Update()
 	//===================================
 	// default items
 	//===================================
-
-	// TODO: Please optimize this, std::map is shit
-	std::map<TESForm*, SInt32> itemMap;
+	ItemMap<TESForm*, SInt32> itemMap(container->numEntries);
 
 	
+	D_MSG(" === DEFAULT ITEM START");
 	TESContainer::Entry *entry;
 	for (UInt32 i = 0; i < container->numEntries; ++i)
 	{
@@ -122,10 +216,11 @@ QuickLoot::Update()
 		if (!IsValidItem(entry->form))
 			continue;
 
-		itemMap[entry->form] = entry->count;
+		itemMap.Add(entry->form,entry->count);
+		D_MSG("DEFAULT item %d [%p] = %d", i, entry->form, entry->count);
 	}
-
-	
+	D_MSG(" === DEFAULT ITEM END");
+	D_VAR(items_.count, "%d");
 	//================================
 	// changes
 	//================================
@@ -142,44 +237,65 @@ QuickLoot::Update()
 		BaseExtraList_SetInventoryChanges(&containerRef_->extraData, changes);
 		ECCData_InitContainer(changes);
 	}
-	
+	D_VAR(items_.count, "%d");
+
+	D_MSG(" === CHANGES START");
 	if (changes->objList)
 	{
-		for(auto it = changes->objList->Begin(); it.End(); it.operator++())
+		D_VAR(changes->objList->Count(), "%d");
+		for(auto it = changes->objList->Begin(); !it.End(); ++it)
 		{
-			auto pEntry = *it;
+			auto pEntry = it.Get();
+			D_VAR(pEntry, "%p");
 			if (!pEntry)
 				continue;
 
 			TESForm *item = pEntry->type;
 			if (!IsValidItem(item))
+			{
+				D_MSG("pEntryInvalid!");
 				continue;
+			}
 
 			SInt32 totalCount = pEntry->countDelta;
 			SInt32 baseCount = 0;
-			if (baseCount = itemMap.at(item))
+			D_VAR(totalCount, "%d");
+			if (itemMap.Get(item,&baseCount))
 			{
+				D_VAR(baseCount, "%d");
 				if (baseCount < 0)			// this entry is already processed. skip.
+				{
+					D_MSG("this entry is already processed. skip.");
 					continue;
+				}
 
 				if (item->formID != 0xF)		// gold (formid 0xf) is special case.
 					totalCount += baseCount;
 			}
-			itemMap[item]  = -1;		// mark as processed.
-
+			if (!itemMap.Set(item, -1))		// mark as processed.
+			{
+				D_MSG("itemmap not set to -1");
+			}
 			if (totalCount <= 0)
+			{
+				D_MSG("totalCount <= 0");
 				continue;
+			}
 
 			InventoryEntryData *defaultEntry = nullptr;
+			D_VAR(item->formID, "%X");
+			D_VAR(pEntry->extendDataList, "%p");
 			if (item->formID != 0xF && pEntry->extendDataList)
 			{
-				for (auto kt = pEntry->extendDataList->Begin(); kt.End(); kt.operator++())
+				D_MSG(" ========== extendDataList BEGIN");
+				for (auto kt = pEntry->extendDataList->Begin(); !kt.End(); ++kt)
 				{
-					auto extraList = *kt;
+					auto extraList = kt.Get();
 					if (!extraList)
 						continue;
 
 					int count = BaseExtraList_GetItemCount(extraList);
+					D_VAR(count, "%d");
 					if (count <= 0)
 					{
 						totalCount += count;
@@ -190,34 +306,35 @@ QuickLoot::Update()
 					InventoryEntryData *pNewEntry = nullptr;
 					if (extraList->m_presence->HasType(kExtraData_TextDisplayData))
 					{
-						pNewEntry = new InventoryEntryData(item, count);
+						pNewEntry = InventoryEntryData::Create(item, count);
 						AddEntryList(pNewEntry, const_cast<BaseExtraList*>(extraList));
 					}
 					else if (extraList->m_presence->HasType(kExtraData_Ownership))
 					{
-						pNewEntry = new InventoryEntryData(item, count);
+						pNewEntry = InventoryEntryData::Create(item, count);
 						AddEntryList(pNewEntry, const_cast<BaseExtraList*>(extraList));
 					}
 					else
 					{
 						if (!defaultEntry)
-							defaultEntry = new InventoryEntryData(item, 0);
+							defaultEntry = InventoryEntryData::Create(item, 0);
 						AddEntryList(defaultEntry, const_cast<BaseExtraList*>(extraList));
 						defaultEntry->countDelta += count;
 					}
-
+					//FormHeap_Allocate
 					if (pNewEntry)
 					{
 						
 						items_.Push(ItemData(pNewEntry,ownerForm_)); //emplace_back(pNewEntry, ownerForm_);
 					}
 				}
+				D_MSG(" ========== extendDataList END");
 			}
 
 			if (totalCount > 0)	// rest
 			{
 				if (!defaultEntry)
-					defaultEntry = new InventoryEntryData(item, 0);
+					defaultEntry = InventoryEntryData::Create(item, 0);
 
 				defaultEntry->countDelta += totalCount;
 			}
@@ -228,36 +345,39 @@ QuickLoot::Update()
 			}
 		}
 	}
-	
+	D_MSG(" === CHANGES END");
 	//================================
 	// default items that were not processed
 	//================================
-	for (auto idx = itemMap.begin(); idx != itemMap.end(); ++idx)
+
 	{
-		auto& node = *idx;
+		auto it = itemMap.begin();
+		TESForm* item;
+		SInt32   count;
+		while (it.next(&item,&count))
+		{
+
+			if (count <= 0)
+				continue;
+
+			if (!IsValidItem(item))
+				continue;
+
+			InventoryEntryData *entry = InventoryEntryData::Create(item, count);
+
+			items_.Push(ItemData(entry, ownerForm_));
+
+		}
 	}
-	for (auto &node : itemMap)
-	{
-		
-		if (node.second <= 0)
-			continue;
-		
-		if (!IsValidItem(node.first))
-			continue;
-		
-		InventoryEntryData *entry = new InventoryEntryData(node.first, node.second);
-		
-		items_.Push(ItemData(entry, ownerForm_));
-		
-	}
-	
+
 	//================================
 	// dropped items
 	//================================
+	D_MSG(" === DROPPED ITEM BEGIN");
 	ExtraDroppedItemList *exDroppedItemList = reinterpret_cast<ExtraDroppedItemList*>(containerRef_->extraData.GetByType(kExtraData_DroppedItemList));
 	if (exDroppedItemList)
 	{
-		//for (UInt32 handle : exDroppedItemList->handles.)
+		D_VAR(exDroppedItemList->handles.Count(), "%d");
 		for(UInt32 i = 0; i < exDroppedItemList->handles.Count(); ++i)
 		{
 			UInt32* handle = exDroppedItemList->handles.GetNthItem(i);
@@ -267,33 +387,49 @@ QuickLoot::Update()
 			TESObjectREFR* refPtr;
 			if (!TESObjectREFR_LookupRefByHandle(*handle, refPtr))
 				continue;
+			D_VAR(refPtr, "%p");
 
 			if (!IsValidItem(refPtr->baseForm))
+			{
+				D_MSG("itemInvalid!");
 				continue;
+			}
 
-			InventoryEntryData *entry = new InventoryEntryData(refPtr->baseForm, 1);
+			InventoryEntryData *entry = InventoryEntryData::Create(refPtr->baseForm, 1);
 			AddEntryList(entry, const_cast<BaseExtraList*>(&refPtr->extraData));
 			items_.Push(ItemData(entry, ownerForm_));
 		}
 	}
-	
-
+	D_MSG(" === DROPPED ITEM END");
+	D_MSG(" === BEGIN ITEMS PRE SORT");
+#if BLD_DEBUG
+	Dbg_PrintItems();
+#endif
+	D_MSG(" === END ITEMS PRE SORT");
 	if (items_.count != 0)
 	{
-		Sort();
+		D_MSG("=== SORT BEGIN");
+		//Sort();
+		D_MSG("=== SORT END");
 	}
+
+	//D_MSG(" === BEGIN ITEMS POST SORT");
+	//Dbg_PrintItems();
+	//D_MSG(" === END ITEMS POST SORT");
 
 #if 0
 	InvokeScaleform_Open();
 
 	m_bUpdateRequest = false;
 #endif
+
+	D_MSG("QuickLoot::Update() END");
 }
 
 void 
 QuickLoot::Sort()
 {
-	chk();
+	
 	qsort(items_.entries, items_.count, sizeof(ItemData), [](const void *pA, const void *pB) -> int {
 
 		if (!pA)
@@ -301,28 +437,41 @@ QuickLoot::Sort()
 		if (!pB)
 			return 1;
 
-		chk();
+		
 		const ItemData &a = *(const ItemData *)pA;
 		const ItemData &b = *(const ItemData *)pB;
-		chk();
+		
 		if (a.pEntry == b.pEntry)
 			return 0;
-		chk();
+		
 		return (a < b) ? -1 : 1;
 	});
-	chk();
+	
 }
 
 void
 QuickLoot::Dbg_PrintItems()
 {
-	printf("ITEMS ========== Sz: %d\n", items_.count);
-	for (UInt32 i = 0; i < items_.count; ++i)
+	_MESSAGE("=== DUMP CONTAINER ===");
+	_MESSAGE("%p [%s] numItems=%d owner=%p", containerRef_->formID, CALL_MEMBER_FN(containerRef_,GetReferenceName)(), items_.count, (ownerForm_ ? ownerForm_->formID : 0));
+
+	ItemData* it;
+	UInt32 idx = 0;
+	while(traverse(items_,&idx, &it))
 	{
-		auto& item = items_[i];
-		printf(" %d - [%p] %s (%d)\n", i, item.pEntry, item.GetName(), item.GetCount());
+		InventoryEntryData *pEntry = it->pEntry;
+		TESForm *form = pEntry->type;
+
+		_MESSAGE("    %p [%s], count=%d, icon=%s, priority=%d isStolen=%d",
+			form->formID,
+			it->GetName(),
+			it->GetCount(),
+			it->GetIcon(),
+			it->priority,
+			it->IsStolen()
+		);
 	}
-	printf("ENDITEMS ============\n");
+	_MESSAGE("=== END DUMP CONTAINER ===");
 }
 
 EventResult 
@@ -341,9 +490,9 @@ QuickLoot::ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrossha
 
 		containerRef_ = ref;
 
+		_MESSAGE(" = START UPDATE");
 		Update();
-
-		Dbg_PrintItems();
+		_MESSAGE(" = END UPDATE");
 	}
 	else
 	{

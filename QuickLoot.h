@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include "skse64/GameReferences.h"
 #include "skse64/GameAPI.h"
 #include "skse64/GameEvents.h"
@@ -29,6 +30,8 @@ private:
 	tArray<ItemData>  items_;
 	SInt32	          selectedIndex_;
 	UInt32	          flags_;
+
+	static SimpleLock tlock_;
 
 	enum
 	{
