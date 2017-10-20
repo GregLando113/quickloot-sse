@@ -1,5 +1,5 @@
 # quickloot-sse
-[WIP] Port of Quick Loot by himika to Skyrim: Special Edition
+[WIP] Port of (https://www.nexusmods.com/skyrim/mods/73096/)[Quick Loot by himika] to Skyrim: Special Edition
 
 This is only for the skse plugin portion of the mod, if all goes well the flash portion will not have to change.
 
