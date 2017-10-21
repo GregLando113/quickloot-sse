@@ -54,8 +54,7 @@ BOOL WINAPI DllMain(HMODULE hMod, DWORD dwReason, LPVOID)
 	{
 		AllocConsole();
 		freopen("CONOUT$", "w", stdout);
-		HWND con = GetConsoleWindow();
-		SetWindowPos(con, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+		SetWindowPos(GetConsoleWindow(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 	}
 	else if (dwReason == DLL_PROCESS_DETACH)
 	{

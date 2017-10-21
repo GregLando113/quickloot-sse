@@ -101,7 +101,7 @@
       <AdditionalDependencies>$(SolutionDir)$(Platform)\$(Configuration)\skse64_common.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y /b "$(OutDir)$(TargetFileName)" "..\..\..\Data\SKSE\Plugins\$(TargetFileName)"</Command>
+      <Command>copy /y /b "$(OutDir)$(TargetFileName)" "$(Skyrim64Path)\Data\SKSE\Plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to plugin dirlol</Message>
@@ -146,12 +146,10 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy /y /b "$(OutDir)$(TargetFileName)" "$(Skyrim64Path)\Data\SKSE\Plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>
@@ -163,6 +161,7 @@
     <ClInclude Include="..\skse64\GameTypes.h" />
     <ClInclude Include="..\skse64\PluginAPI.h" />
     <ClInclude Include="dbg.h" />
+    <ClInclude Include="Flags.h" />
     <ClInclude Include="GameFunctions.h" />
     <ClInclude Include="ItemData.h" />
     <ClInclude Include="QuickLoot.h" />

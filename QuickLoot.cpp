@@ -4,6 +4,7 @@
 #include "GameFunctions.h"
 #include "dbg.h"
 
+#include "skse64\GameRTTI.h"
 
 SimpleLock QuickLoot::tlock_;
 QuickLoot g_quickloot;
@@ -59,9 +60,8 @@ static void AddEntryList(InventoryEntryData * newentry,BaseExtraList* list)
 {
 	if (!list)
 		return;
-
 	if (!newentry->extendDataList)
-		newentry->extendDataList = new ExtendDataList;
+		newentry->extendDataList = ExtendDataList::Create();
 	newentry->extendDataList->Push(list);
 }
 
@@ -159,11 +159,22 @@ bool traverse(tArray<T>& arr,UInt32* idx, T** out)
 	return *idx < arr.count;
 }
 
+#if 0
+bool QuickLootScaleform_Register(GFxMovieView * view, GFxValue * root)
+{
+	root->
+
+	return true;
+}
+#endif
+
 void
 QuickLoot::Initialize()
 {
 	auto crosshairrefdispatch = (EventDispatcher<SKSECrosshairRefEvent>*)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_CrosshairEvent);
 	crosshairrefdispatch->AddEventSink(this);
+
+	//g_scaleform->Register("Loot Menu", QuickLootScaleform_Register);
 }
 
 void
@@ -193,23 +204,24 @@ QuickLoot::Update()
 		D_VAR(ownerForm_, "%p");
 	}
 	
-	TESContainer* container = nullptr;
-	if (containerRef_->baseForm->GetFormType() == kFormType_Container)
+	TESContainer* baseContainer = DYNAMIC_CAST(containerRef_->baseForm, TESForm, TESContainer);
+	ASSERT(baseContainer);
+	/*if (containerRef_->baseForm->GetFormType() == kFormType_Container)
 		container = &dynamic_cast<TESObjectCONT*>(containerRef_->baseForm)->container;
 	else if (containerRef_->baseForm->GetFormType() == kFormType_NPC)
-		container = &dynamic_cast<TESActorBase* >(containerRef_->baseForm)->container;
+		container = &dynamic_cast<TESActorBase* >(containerRef_->baseForm)->container;*/
 
 	//===================================
 	// default items
 	//===================================
-	ItemMap<TESForm*, SInt32> itemMap(container->numEntries);
+	ItemMap<TESForm*, SInt32> itemMap(baseContainer->numEntries);
 
 	
 	D_MSG(" === DEFAULT ITEM START");
 	TESContainer::Entry *entry;
-	for (UInt32 i = 0; i < container->numEntries; ++i)
+	for (UInt32 i = 0; i < baseContainer->numEntries; ++i)
 	{
-		entry = container->entries[i];
+		entry = baseContainer->entries[i];
 		if (!entry)
 			continue;
 
@@ -223,8 +235,9 @@ QuickLoot::Update()
 	D_VAR(items_.count, "%d");
 	//================================
 	// changes
+
 	//================================
-	ExtraContainerChanges* exChanges = static_cast<ExtraContainerChanges*>(containerRef_->extraData.GetByType(kExtraData_ContainerChanges));
+	ExtraContainerChanges* exChanges = reinterpret_cast<ExtraContainerChanges*>(containerRef_->extraData.GetByType(kExtraData_ContainerChanges));
 	ExtraContainerChanges::Data* changes = (exChanges) ? exChanges->data : nullptr;
 	
 	if (!changes)
@@ -234,7 +247,7 @@ QuickLoot::Update()
 
 		changes = (ExtraContainerChanges::Data*)Heap_Allocate(sizeof(ExtraContainerChanges::Data));
 		ECCData_ctor(changes, containerRef_);
-		BaseExtraList_SetInventoryChanges(&containerRef_->extraData, changes);
+		BaseExtraList_SetInventoryChanges(&(containerRef_->extraData), changes);
 		ECCData_InitContainer(changes);
 	}
 	D_VAR(items_.count, "%d");
@@ -460,10 +473,11 @@ QuickLoot::Dbg_PrintItems()
 	while(traverse(items_,&idx, &it))
 	{
 		InventoryEntryData *pEntry = it->pEntry;
-		TESForm *form = pEntry->type;
+		TESForm *form = pEntry ? pEntry->type : nullptr;
 
-		_MESSAGE("    %p [%s], count=%d, icon=%s, priority=%d isStolen=%d",
-			form->formID,
+		_MESSAGE("    %p (%X) [%s], count=%d, icon=%s, priority=%d isStolen=%d",
+			pEntry, 
+			form ? form->formID : 0xBAADC0DE,
 			it->GetName(),
 			it->GetCount(),
 			it->GetIcon(),

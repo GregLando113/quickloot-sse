@@ -8,6 +8,7 @@
 #include "skse64/GameTypes.h"
 
 #include "ItemData.h"
+#include "Flags.h"
 
 class QuickLoot
 	: public BSTEventSink<SKSECrosshairRefEvent>
@@ -29,7 +30,7 @@ private:
 	TESForm*          ownerForm_;
 	tArray<ItemData>  items_;
 	SInt32	          selectedIndex_;
-	UInt32	          flags_;
+	Flags<UInt32>	  flags_;
 
 	static SimpleLock tlock_;
 
@@ -38,10 +39,6 @@ private:
 		kQuickLootFlag_IsOpen     = (1 << 0),
 		kQuickLootFlag_IsDisabled = (1 << 1)
 	};
-
-	bool GetFlags(UInt32 flags) { return (flags_ & flags) != 0; }
-	void SetFlags(UInt32 flags) { flags_ |= flags; }
-	void UnsetFlags(UInt32 flags) { flags_ &= ~flags;  }
 };
 
 

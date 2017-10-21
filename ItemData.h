@@ -139,8 +139,7 @@ struct ItemData
 	ItemData(const ItemData &rhs);
 	ItemData(ItemData &&rhs);
 
-	// destractor
-	~ItemData();
+	void Delete();
 
 	ItemData & operator=(const ItemData &rhs)
 	{

@@ -115,11 +115,6 @@ static void chk(const char* file, const char* func, int line)
 	printf("%s (%d): %s\n", file, line, func);
 }
 
-static char* GetFormName(TESForm* form)
-{
-	return *(char**)((uintptr_t)form + 0x28);
-}
-
 ItemData::ItemData(InventoryEntryData *a_pEntry, TESForm *owner) : pEntry(a_pEntry), type(Type::kType_None), priority(0), name(),
 isStolen(false), isEnchanted(false), isQuestItem(false)
 {
@@ -147,7 +142,7 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 				isEnchanted = true;
 		}
 		
-		TESEnchantableForm *enchantForm = dynamic_cast<TESEnchantableForm *>(pEntry->type);
+		TESEnchantableForm *enchantForm = DYNAMIC_CAST(pEntry->type, TESForm, TESEnchantableForm);
 		if (enchantForm && enchantForm->enchantment)
 			isEnchanted = true;
 	}
@@ -156,7 +151,7 @@ isStolen(false), isEnchanted(false), isQuestItem(false)
 	TESForm *itemOwner = InventoryEntryData_GetOwner(pEntry); //pEntry->GetOwner();
 	if (!itemOwner)
 		itemOwner = owner;
-	isStolen = InventoryEntryData_IsOwnedBy(pEntry, *g_thePlayer, itemOwner, true);//!pEntry->IsOwnedBy(g_thePlayer, itemOwner, true);
+	isStolen = !InventoryEntryData_IsOwnedBy(pEntry, *g_thePlayer, itemOwner, true);//!pEntry->IsOwnedBy(g_thePlayer, itemOwner, true);
 
 	// set isQuestItem
 	isQuestItem = InventoryEntryData_IsQuestItem(pEntry); // pEntry->IsQuestItem();
@@ -251,8 +246,8 @@ isStolen(rhs.isStolen), isEnchanted(rhs.isEnchanted), isQuestItem(rhs.isQuestIte
 	rhs.pEntry = nullptr;
 }
 
-
-ItemData::~ItemData()
+void
+ItemData::Delete()
 {
 	if (pEntry)
 		pEntry->Delete();
@@ -383,7 +378,7 @@ static ItemData::Type GetItemTypeWeapon(TESObjectWEAP *weap)
 		break;
 	case TESObjectWEAP::GameData::kType_TwoHandAxe:
 		static BGSKeyword *keywordWarHammer = (BGSKeyword*)TESForm_LookupFormByID(0x06D930);		// WeapTypeWarhammer
-		if (dynamic_cast<BGSKeywordForm*>(weap)->HasKeyword(keywordWarHammer))
+		if (reinterpret_cast<BGSKeywordForm*>(weap)->HasKeyword(keywordWarHammer))
 			type = ItemData::kType_WeaponHammer;
 		else
 			type = ItemData::kType_WeaponBattleAxe;

@@ -62,3 +62,4 @@ extern RelocAddr<InventoryEntryData_IsQuestItem_t*>		 InventoryEntryData_IsQuest
 // Magicitem::
 typedef MagicItem::EffectItem* MagicItem_GetCostliestEffectItem_t(MagicItem* o, int arg1, bool arg2);
 extern RelocAddr<MagicItem_GetCostliestEffectItem_t*>	 MagicItem_GetCostliestEffectItem;
+
