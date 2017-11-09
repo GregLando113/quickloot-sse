@@ -12,6 +12,7 @@ IDebugLog gLog("qldbg.txt");
 
 SKSEMessagingInterface* g_messaging;
 SKSEScaleformInterface* g_scaleform;
+SKSETaskInterface*      g_tasks;
 
 EventDispatcher<SKSECrosshairRefEvent>* g_crosshaireventdispatcher;
 
@@ -35,6 +36,7 @@ extern "C"
 
 		g_messaging = (SKSEMessagingInterface*)skse->QueryInterface(kInterface_Messaging);
 		g_scaleform = (SKSEScaleformInterface*)skse->QueryInterface(kInterface_Scaleform);
+		g_tasks     = (SKSETaskInterface*)     skse->QueryInterface(kInterface_Task);
 
 		g_quickloot.Initialize();
 

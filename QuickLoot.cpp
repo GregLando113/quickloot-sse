@@ -4,7 +4,17 @@
 #include "GameFunctions.h"
 #include "dbg.h"
 
+
+#include <cstring>
+
 #include "skse64\GameRTTI.h"
+
+#include "skse64\Hooks_UI.h"
+#include "skse64\GameMenus.h"
+#include "skse64\GameSettings.h"
+
+
+#define ForItems(type, container) for(UInt32 i = 0, type &it; i < container.count; ++i, it = container[i])
 
 SimpleLock QuickLoot::tlock_;
 QuickLoot g_quickloot;
@@ -15,6 +25,53 @@ public:
 	virtual ~ExtraDroppedItemList();					// 00416BB0
 	tList<UInt32>	handles;	// 08
 private:
+};
+
+class LootMenuUIDelegate : public UIDelegate_v1
+{
+public:
+	typedef void (QuickLoot::*FnCallback)(std::vector<GFxValue> &args);
+
+	const char *	m_target;
+	FnCallback		m_callback;
+
+	LootMenuUIDelegate(const char *target, FnCallback callback) 
+		: m_target(target), m_callback(callback)
+	{
+	}
+
+	void Run() override
+	{
+		GFxMovieView *view = g_quickloot.view;
+
+		char target[64];
+		strcpy_s(target, 64, "_root.Menu_mc");
+		strcat_s(target, m_target);
+
+		std::vector<GFxValue> args;
+		(g_quickloot.*m_callback)(args);
+
+		if (args.empty())
+			view->Invoke(target, nullptr, nullptr, 0);
+		else
+			view->Invoke(target, nullptr, &args[0], args.size());
+	}
+
+	void Dispose() override
+	{
+		Heap_Free(this);
+	}
+
+	static void Queue(const char *target, FnCallback callback)
+	{
+		UIManager* m = UIManager::GetSingleton();
+		if (m)
+		{
+			LootMenuUIDelegate* delg = (LootMenuUIDelegate*)Heap_Allocate(sizeof(LootMenuUIDelegate));
+			new (delg) LootMenuUIDelegate(target, callback);
+			m->QueueCommand(delg);
+		}
+	}
 };
 
 #define EVENT_REQUIRE(expr) if(! (expr) ) return kEvent_Continue
@@ -137,12 +194,12 @@ public:
 		return false;
 	}
 
-
-	iterator&& begin()
+#if 1
+	iterator begin()
 	{
 		return iterator{ keyBase_ , valBase_, keyBase_ + count_ };
 	}
-
+#endif
 private:
 	void*  base_;
 	_Key*  keyBase_;
@@ -173,8 +230,30 @@ QuickLoot::Initialize()
 {
 	auto crosshairrefdispatch = (EventDispatcher<SKSECrosshairRefEvent>*)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_CrosshairEvent);
 	crosshairrefdispatch->AddEventSink(this);
-
-	//g_scaleform->Register("Loot Menu", QuickLootScaleform_Register);
+	enum
+	{
+		kType_PauseGame = 0x01,
+		kType_DoNotDeleteOnClose = 0x02,
+		kType_ShowCursor = 0x04,
+		kType_Unk0008 = 0x08,
+		kType_Modal = 0x10,
+		kType_StopDrawingWorld = 0x20,
+		kType_Open = 0x40,
+		kType_PreventGameLoad = 0x80,
+		kType_Unk0100 = 0x100,
+		kType_HideOther = 0x200,
+		kType_Unk0400 = 0x400,
+		kType_DoNotPreventGameSave = 0x800,
+		kType_Unk1000 = 0x1000,
+		kType_ItemMenu = 0x2000,
+		kType_StopCrosshairUpdate = 0x4000,
+		kType_Unk8000 = 0x8000,
+		kType_Unk10000 = 0x10000	// mouse cursor
+	};
+	if (CALL_MEMBER_FN(GFxLoader::GetSingleton(), LoadMovie)(this, &view, "LootMenu", 1, 0.0f))
+	{
+		flags = kType_DoNotDeleteOnClose | kType_DoNotPreventGameSave | kType_Unk10000;
+	}
 }
 
 void
@@ -486,6 +565,118 @@ QuickLoot::Dbg_PrintItems()
 		);
 	}
 	_MESSAGE("=== END DUMP CONTAINER ===");
+}
+
+void 
+QuickLoot::InvokeScaleform_Open()
+{
+	if (selectedIndex_ >= items_.count)
+	{
+		selectedIndex_ = items_.count - 1;
+	}
+	else if (selectedIndex_ < 0)
+	{
+		selectedIndex_ = 0;
+	}
+	LootMenuUIDelegate::Queue(".openContainer", &QuickLoot::SetScaleformArgs_Open);
+}
+
+void 
+QuickLoot::InvokeScaleform_Close()
+{
+	LootMenuUIDelegate::Queue(".closeContainer", &QuickLoot::SetScaleformArgs_Close);
+}
+
+void 
+QuickLoot::InvokeScaleform_SetIndex()
+{
+	LootMenuUIDelegate::Queue(".setSelectedIndex", &QuickLoot::SetScaleformArgs_SetIndex);
+}
+
+void 
+QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
+{
+	SimpleLocker guard(&tlock_);
+
+	static char *sSteal = (*g_gameSettingCollection)->Get("sSteal")->data.s;
+	static char *sTake = (*g_gameSettingCollection)->Get("sTake")->data.s;
+
+	GFxValue argItems;
+	view->CreateArray(&argItems);
+	GFxValue argRefID; // = (double)m_targetRef->formID;
+	argRefID.SetNumber(targetRef_->formID);
+	GFxValue argTitle;
+	argTitle.SetString(CALL_MEMBER_FN(targetRef_, GetReferenceName)());
+	GFxValue argTake;
+	argTake.SetString((CALL_MEMBER_FN(targetRef_, IsOffLimits)()) ? sSteal : sTake);
+	GFxValue argSearch;
+	argSearch.SetString((*g_gameSettingCollection)->Get("sSearch")->data.s);
+	GFxValue argSelectedIndex;
+	argSelectedIndex.SetNumber((double)selectedIndex_);
+
+	for(UInt32 i = 0; i < items_.count; ++i)
+	{
+		ItemData& itemData = items_[i];
+		GFxValue text;
+		argTitle.SetString(itemData.GetName());
+		GFxValue count;
+		count.SetNumber((double)itemData.GetCount());
+		GFxValue value;
+		value.SetNumber((double)itemData.GetValue());
+		GFxValue weight;
+		weight.SetNumber(itemData.GetWeight());
+		GFxValue isStolen;
+		isStolen.SetBool(itemData.IsStolen());
+		GFxValue iconLabel;
+		iconLabel.SetString(itemData.GetIcon());
+		GFxValue itemIndex;
+		itemIndex.SetNumber((double)0);
+
+		GFxValue item;
+		view->CreateObject(&item);
+		item.SetMember("text", &text);
+		item.SetMember("count", &count);
+		item.SetMember("value", &value);
+		item.SetMember("weight", &weight);
+		item.SetMember("isStolen", &isStolen);
+		item.SetMember("iconLabel", &iconLabel);
+
+		TESForm *form = itemData.pEntry->type;
+		if (form->formType == kFormType_Book)
+		{
+			TESObjectBOOK *book = static_cast<TESObjectBOOK*>(form);
+			GFxValue isRead;
+			isRead.SetBool((book->data.flags & TESObjectBOOK::Data::kType_Read) != 0);
+			item.SetMember("isRead", &isRead);
+		}
+
+		if (form->IsArmor() || form->IsWeapon())
+		{
+			GFxValue isEnchanted;
+			isEnchanted.SetBool(itemData.IsEnchanted());
+			item.SetMember("isEnchanted", &isEnchanted);
+		}
+
+		argItems.PushBack(&item);
+	}
+
+	args.reserve(6);
+	args.push_back(argItems);				// arg1
+	args.push_back(argRefID);				// arg2
+	args.push_back(argTitle);				// arg3
+	args.push_back(argTake);				// arg4
+	args.push_back(argSearch);				// arg5
+	args.push_back(argSelectedIndex);		// arg6
+}
+
+void 
+QuickLoot::SetScaleformArgs_Close(std::vector<GFxValue>& args)
+{
+}
+
+void 
+QuickLoot::SetScaleformArgs_SetIndex(std::vector<GFxValue>& args)
+{
 }
 
 EventResult 
