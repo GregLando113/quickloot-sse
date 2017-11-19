@@ -1,12 +1,13 @@
 #include "GameFunctions.h"
 
 
-/* For Skyrim SE v1.5.3 */
+/* For Skyrim SE v1.5.16 */
+// 1.5.16 = +0x80 bytes from 1.5.3
 
 // \x33\xDB\x41\x0F\xB6\xF0\x8B\xFB\x48\x85\xC0\x74\x1E
 // xxxxxxxxxxxxx
 // -0x13
-RelocAddr<TESObjectREFR_GetInventoryItemCount_t*> TESObjectREFR_GetInventoryItemCount (0x0028E320);
+RelocAddr<TESObjectREFR_GetInventoryItemCount_t*> TESObjectREFR_GetInventoryItemCount (0x0028E320 + 0x80);
 
 /*
 00007FF644240DC7 | 48 C7 44 24 30 00 00 00 00   | mov qword ptr ss:[rsp+30],0                              |
@@ -37,18 +38,18 @@ RelocAddr<TESObjectREFR_GetInventoryItemCount_t*> TESObjectREFR_GetInventoryItem
 00007FF644240E2E | 48 8D 15 4B 21 D7 00         | lea rdx,qword ptr ds:[7FF644FB2F80]                      | 7FF644FB2F80:"No nearby NPC found to sound alarm, alarm aborted."
 00007FF644240E35 | 48 8B CF                     | mov rcx,rdi                                              |
 00007FF644240E38 | FF 50 10                     | call qword ptr ds:[rax+10]                               |*/
-RelocAddr<TESObjectREFR_LookupRefByHandle_t*>     TESObjectREFR_LookupRefByHandle   (0x002131C0);
+RelocAddr<TESObjectREFR_LookupRefByHandle_t*>     TESObjectREFR_LookupRefByHandle   (0x002131C0 + 0x80);
 
 // \x48\x0F\x44\xD6\x48\x85\xD2\x0F\x85\x00\x00\x00\x00\x48\x85\xC0\x0F\x85
 // xxxxxxxxx????xxxxx
 // -0x2E
-RelocAddr<TESForm_GetOwner_t*> TESForm_GetOwner (0x002A6740);
+RelocAddr<TESForm_GetOwner_t*> TESForm_GetOwner (0x002A6740 + 0x80);
 
 // 48 85 C9 0F 84 C1 00 00 00 0F B6 41 1A 83 C0 E9 83 F8 1D 0F 87 B1 00 00 00 -0x16
-RelocAddr<TESForm_GetWeight_t*>  TESForm_GetWeight (0x001A1800);
+RelocAddr<TESForm_GetWeight_t*>  TESForm_GetWeight (0x001A1800 + 0x80);
 
 // 48 85 D2 74 2F 8B 4B 0C FF C9 8B 44 24 48 48 23 C8 48 8D 04 49 48 8D 04 C2 48 83 78 10 00 74 14 -0x4C
-RelocAddr<TESForm_LookupFormByID_t*>   TESForm_LookupFormByID (0x00194300);
+RelocAddr<TESForm_LookupFormByID_t*>   TESForm_LookupFormByID (0x00194300 + 0x80);
 
 /*
 00007FF7295D72F0 | 48 8D 15 B9 61 2F 01         | lea rdx,qword ptr ds:[7FF72A8CD4B0]                      | 7FF72A8CD4B0:"Found ReferenceHandle extra on invalid %s ref '%s' (%08X)"
@@ -93,27 +94,27 @@ RelocAddr<TESForm_LookupFormByID_t*>   TESForm_LookupFormByID (0x00194300);
 00007FF7295D737F | E8 9C 20 F5 FF               | call skyrimse.7FF729529420                               |< ======= dtor
 00007FF7295D7384 | 41 8B 47 40                  | mov eax,dword ptr ds:[r15+40]                            |
 */
-RelocAddr<ECCData_ctor_t*>  ECCData_ctor (0x001D9330);
-RelocAddr<ECCData_dtor_t*>  ECCData_dtor (0x001D9420);
+RelocAddr<ECCData_ctor_t*>  ECCData_ctor (0x001D9330 + 0x80);
+RelocAddr<ECCData_dtor_t*>  ECCData_dtor (0x001D9420 + 0x80);
 
 // 33 FF 44 8B E7 48 8B 49 08 0F B7 D7 66 89 55 40 48 85 C9 74 15 8B C7 80 79 1A 3E -0x32
-RelocAddr<ECCData_InitContainer_t*> ECCData_InitContainer (0x001E9E70);
+RelocAddr<ECCData_InitContainer_t*> ECCData_InitContainer (0x001E9E70 + 0x80);
 
 // 65 48 8B 04 25 58 00 00 00 B9 68 07 00 00 4E 8B 34 C0 4C 03 F1 41 8B 3E 89 7C 24 60 41 C7 06 61 00 00 00 49 8D 5F 10 48 89 5C 24 68 48 8B CB
 // first entry
-RelocAddr<BaseExtraList_SetInventoryChanges_t*> BaseExtraList_SetInventoryChanges (0x0010F6C0);
+RelocAddr<BaseExtraList_SetInventoryChanges_t*> BaseExtraList_SetInventoryChanges (0x0010F6C0 + 0x80);
 
 // 48 85 FF 74 06 0F B7 47 10 EB 05 B8 01 00 00 00 48 8B 5C 24 48 48 83 C4 30 5F C3 -0x47
-RelocAddr<BaseExtraList_GetItemCount_t*>	    BaseExtraList_GetItemCount (0x001138B0);
+RelocAddr<BaseExtraList_GetItemCount_t*>	    BaseExtraList_GetItemCount (0x001138B0 + 0x80);
 
 // 48 8B 59 08 48 85 DB 74 22 48 8B 1B 48 85 DB 74 1A 48 8B CB (first match)
-RelocAddr<InventoryEntryData_GetOwner_t*>		 InventoryEntryData_GetOwner (0x001D6750);
+RelocAddr<InventoryEntryData_GetOwner_t*>		 InventoryEntryData_GetOwner (0x001D6750 + 0x80);
 
 // 48 8B F0 48 85 C0 75 04 48 8B 73 40 33 C0 80 7E 1A 2B 48 0F 44 C6 48 3B EE 0F 84 80 00 00 00 80 7D 1A 0B -0x4D
-RelocAddr<InventoryEntryData_IsOwnedBy_t*>		InventoryEntryData_IsOwnedBy (0x001D76C0);
+RelocAddr<InventoryEntryData_IsOwnedBy_t*>		InventoryEntryData_IsOwnedBy (0x001D76C0 + 0x80);
 
 // 48 8B 59 08 40 32 FF 48 85 DB 74 4A 48 89 74 24 30 0F 1F 44 00 00 48 83 7B 08 00 75 06 -0xA
-RelocAddr<InventoryEntryData_IsQuestItem_t*>    InventoryEntryData_IsQuestItem (0x001D6CD0);
+RelocAddr<InventoryEntryData_IsQuestItem_t*>    InventoryEntryData_IsQuestItem (0x001D6CD0 + 0x80);
 
 // 49 89 5B 10 49 89 73 18 33 C0 49 89 43 D8 -0x10
-RelocAddr<MagicItem_GetCostliestEffectItem_t*>	 MagicItem_GetCostliestEffectItem (0x00101DC0);
+RelocAddr<MagicItem_GetCostliestEffectItem_t*>	 MagicItem_GetCostliestEffectItem (0x00101DC0 + 0x80);
