@@ -149,7 +149,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y /b "$(OutDir)$(TargetFileName)" "$(Skyrim64Path)\Data\SKSE\Plugins\$(TargetFileName)"</Command>
+      <Command>copy /y /b "$(TargetPath)" "$(Skyrim64Path)\Data\SKSE\Plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>
@@ -157,9 +157,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\skse64\GameAPI.h" />
-    <ClInclude Include="..\skse64\GameTypes.h" />
-    <ClInclude Include="..\skse64\PluginAPI.h" />
     <ClInclude Include="dbg.h" />
     <ClInclude Include="Flags.h" />
     <ClInclude Include="GameFunctions.h" />
@@ -174,11 +171,18 @@
     <ClCompile Include="..\skse64\GameExtraData.cpp" />
     <ClCompile Include="..\skse64\GameFormComponents.cpp" />
     <ClCompile Include="..\skse64\GameForms.cpp" />
+    <ClCompile Include="..\skse64\GameMenus.cpp" />
     <ClCompile Include="..\skse64\GameReferences.cpp" />
     <ClCompile Include="..\skse64\GameRTTI.cpp" />
+    <ClCompile Include="..\skse64\GameSettings.cpp" />
     <ClCompile Include="..\skse64\GameTypes.cpp" />
+    <ClCompile Include="..\skse64\GameUtilities.cpp" />
     <ClCompile Include="..\skse64\HashUtil.cpp" />
     <ClCompile Include="..\skse64\NiNodes.cpp" />
+    <ClCompile Include="..\skse64\ScaleformAPI.cpp" />
+    <ClCompile Include="..\skse64\ScaleformState.cpp" />
+    <ClCompile Include="..\skse64\ScaleformTypes.cpp" />
+    <ClCompile Include="..\skse64\ScaleformValue.cpp" />
     <ClCompile Include="GameFunctions.cpp" />
     <ClCompile Include="ItemData.cpp" />
     <ClCompile Include="QuickLoot.cpp" />

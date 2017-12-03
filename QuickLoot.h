@@ -13,9 +13,18 @@
 #include "ItemData.h"
 #include "Flags.h"
 
+
+class QuickLootMenu
+	: public IMenu
+{
+public:
+
+	static IMenu* Create(void);
+	QuickLootMenu(const char* swfPath);
+};
+
 class QuickLoot
-	: public BSTEventSink<SKSECrosshairRefEvent>,
-	  public IMenu
+	: public BSTEventSink<SKSECrosshairRefEvent>
 {
 public:
 
@@ -25,6 +34,8 @@ public:
 	void Sort();
 
 	void Dbg_PrintItems();
+
+	IMenu*             menu;
 private:
 
 	void InvokeScaleform_Open();
@@ -35,6 +46,7 @@ private:
 	void SetScaleformArgs_SetIndex(std::vector<GFxValue> &args);
 
 	EventResult ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrosshairRefEvent> * dispatcher) override;
+
 
 	TESObjectREFR*    targetRef_;
 	TESObjectREFR*	  containerRef_;
@@ -47,8 +59,9 @@ private:
 
 	enum
 	{
-		kQuickLootFlag_IsOpen     = (1 << 0),
-		kQuickLootFlag_IsDisabled = (1 << 1)
+		kQuickLoot_IsOpen        = (1 << 0),
+		kQuickLoot_IsDisabled    = (1 << 1),
+		kQuickLoot_RequestUpdate = (1 << 2)
 	};
 };
 

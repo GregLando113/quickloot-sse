@@ -38,7 +38,22 @@ extern "C"
 		g_scaleform = (SKSEScaleformInterface*)skse->QueryInterface(kInterface_Scaleform);
 		g_tasks     = (SKSETaskInterface*)     skse->QueryInterface(kInterface_Task);
 
-		g_quickloot.Initialize();
+		class ModLoadedEventSink : public BSTEventSink<SKSEModCallbackEvent>
+		{
+		public:
+			ModLoadedEventSink() {}
+			virtual EventResult ReceiveEvent(SKSEModCallbackEvent *evn, EventDispatcher<SKSEModCallbackEvent> *source) override
+			{
+				source->RemoveEventSink(this);
+				g_quickloot.Initialize();
+				return kEvent_Continue;
+			}
+		};
+		static ModLoadedEventSink m;
+		EventDispatcher<SKSEModCallbackEvent> * md = (EventDispatcher<SKSEModCallbackEvent> *)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_ActionEvent);
+		if (md)
+			md->AddEventSink(&m);
+
 
 		printf("SKSEPlugin_Load skse v. = %X\n", skse->skseVersion);
 		TESObjectREFR* r = nullptr;

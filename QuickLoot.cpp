@@ -1,10 +1,4 @@
 #include "QuickLoot.h"
-
-#include "Interfaces.h"
-#include "GameFunctions.h"
-#include "dbg.h"
-
-
 #include <cstring>
 
 #include "skse64\GameRTTI.h"
@@ -12,6 +6,11 @@
 #include "skse64\Hooks_UI.h"
 #include "skse64\GameMenus.h"
 #include "skse64\GameSettings.h"
+
+#include "Interfaces.h"
+#include "GameFunctions.h"
+#include "dbg.h"
+
 
 
 #define ForItems(type, container) for(UInt32 i = 0, type &it; i < container.count; ++i, it = container[i])
@@ -27,29 +26,36 @@ public:
 private:
 };
 
+GFxLoader * GetGfxSingleton()
+{
+	// 4E9F39D1066653EF254B38406212E476F80A6C9B+AE
+	RelocPtr<GFxLoader*> g_GFxLoader(0x02F3ECF8);
+	return *g_GFxLoader;
+}
+
 class LootMenuUIDelegate : public UIDelegate_v1
 {
 public:
 	typedef void (QuickLoot::*FnCallback)(std::vector<GFxValue> &args);
 
-	const char *	m_target;
-	FnCallback		m_callback;
+	const char *	target_;
+	FnCallback		callback_;
 
 	LootMenuUIDelegate(const char *target, FnCallback callback) 
-		: m_target(target), m_callback(callback)
+		: target_(target), callback_(callback)
 	{
 	}
 
 	void Run() override
 	{
-		GFxMovieView *view = g_quickloot.view;
+		GFxMovieView *view = g_quickloot.menu->view;
 
 		char target[64];
 		strcpy_s(target, 64, "_root.Menu_mc");
-		strcat_s(target, m_target);
+		strcat_s(target, target_);
 
 		std::vector<GFxValue> args;
-		(g_quickloot.*m_callback)(args);
+		(g_quickloot.*callback_)(args);
 
 		if (args.empty())
 			view->Invoke(target, nullptr, nullptr, 0);
@@ -64,12 +70,11 @@ public:
 
 	static void Queue(const char *target, FnCallback callback)
 	{
-		UIManager* m = UIManager::GetSingleton();
-		if (m)
+		if (g_tasks)
 		{
 			LootMenuUIDelegate* delg = (LootMenuUIDelegate*)Heap_Allocate(sizeof(LootMenuUIDelegate));
 			new (delg) LootMenuUIDelegate(target, callback);
-			m->QueueCommand(delg);
+			g_tasks->AddUITask(delg);
 		}
 	}
 };
@@ -216,20 +221,8 @@ bool traverse(tArray<T>& arr,UInt32* idx, T** out)
 	return *idx < arr.count;
 }
 
-#if 0
-bool QuickLootScaleform_Register(GFxMovieView * view, GFxValue * root)
+QuickLootMenu::QuickLootMenu(const char* swfPath)
 {
-	root->
-
-	return true;
-}
-#endif
-
-void
-QuickLoot::Initialize()
-{
-	auto crosshairrefdispatch = (EventDispatcher<SKSECrosshairRefEvent>*)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_CrosshairEvent);
-	crosshairrefdispatch->AddEventSink(this);
 	enum
 	{
 		kType_PauseGame = 0x01,
@@ -250,16 +243,55 @@ QuickLoot::Initialize()
 		kType_Unk8000 = 0x8000,
 		kType_Unk10000 = 0x10000	// mouse cursor
 	};
-	if (CALL_MEMBER_FN(GFxLoader::GetSingleton(), LoadMovie)(this, &view, "LootMenu", 1, 0.0f))
+
+
+	auto mvloader = GetGfxSingleton();
+	if (!mvloader) D_MSG("mvloader == NULL"); else D_MSG("mvloader != NULL");
+	if (mvloader && CALL_MEMBER_FN(mvloader, LoadMovie)(this, &view, swfPath, 1, 1.0f))
 	{
+		_MESSAGE("  loaded Inteface/%s.swf successfully", swfPath);
+
+		unk0C = 2;			// set this lower than that of Fader Menu (3)
 		flags = kType_DoNotDeleteOnClose | kType_DoNotPreventGameSave | kType_Unk10000;
 	}
+}
+
+IMenu* QuickLootMenu::Create(void)
+{
+	void* p = ScaleformHeap_Allocate(sizeof(IMenu));
+	if (p)
+	{
+		IMenu* menu = new (p) QuickLootMenu("LootMenu");
+		g_quickloot.menu = menu;
+		return menu;
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+void
+QuickLoot::Initialize()
+{
+	auto crosshairrefdispatch = (EventDispatcher<SKSECrosshairRefEvent>*)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_CrosshairEvent);
+	crosshairrefdispatch->AddEventSink(this);
+
+	MenuManager * mm = MenuManager::GetSingleton();
+	if (mm)
+		mm->Register("LootMenu", QuickLootMenu::Create);
 }
 
 void
 QuickLoot::Update()
 {
-	//SimpleLocker lock(&tlock_);
+	SimpleLocker lock(&tlock_);
+
+	if (flags_.GetAll(kQuickLoot_IsDisabled))
+	{
+		return;
+	}
+
 	D_VAR(items_.count, "%d");
 	D_MSG("Quickloot::Update() START");
 	items_.count = 0;
@@ -509,10 +541,10 @@ QuickLoot::Update()
 	//Dbg_PrintItems();
 	//D_MSG(" === END ITEMS POST SORT");
 
-#if 0
+#if 1
 	InvokeScaleform_Open();
 
-	m_bUpdateRequest = false;
+	flags_.Set(kQuickLoot_RequestUpdate);
 #endif
 
 	D_MSG("QuickLoot::Update() END");
@@ -567,7 +599,7 @@ QuickLoot::Dbg_PrintItems()
 	_MESSAGE("=== END DUMP CONTAINER ===");
 }
 
-void 
+void
 QuickLoot::InvokeScaleform_Open()
 {
 	if (selectedIndex_ >= items_.count)
@@ -602,7 +634,7 @@ QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
 	static char *sTake = (*g_gameSettingCollection)->Get("sTake")->data.s;
 
 	GFxValue argItems;
-	view->CreateArray(&argItems);
+	menu->view->CreateArray(&argItems);
 	GFxValue argRefID; // = (double)m_targetRef->formID;
 	argRefID.SetNumber(targetRef_->formID);
 	GFxValue argTitle;
@@ -633,7 +665,7 @@ QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
 		itemIndex.SetNumber((double)0);
 
 		GFxValue item;
-		view->CreateObject(&item);
+		menu->view->CreateObject(&item);
 		item.SetMember("text", &text);
 		item.SetMember("count", &count);
 		item.SetMember("value", &value);
@@ -672,11 +704,17 @@ QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
 void 
 QuickLoot::SetScaleformArgs_Close(std::vector<GFxValue>& args)
 {
+	SimpleLocker guard(&tlock_);
 }
 
 void 
 QuickLoot::SetScaleformArgs_SetIndex(std::vector<GFxValue>& args)
 {
+	SimpleLocker guard(&tlock_);
+	args.reserve(1);
+	GFxValue idx;
+	idx.SetNumber((double)selectedIndex_);
+	args.push_back(idx);
 }
 
 EventResult 

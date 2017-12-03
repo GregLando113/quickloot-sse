@@ -17,17 +17,8 @@
     <ClInclude Include="Interfaces.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\skse64\GameAPI.h">
-      <Filter>SKSE</Filter>
-    </ClInclude>
-    <ClInclude Include="..\skse64\PluginAPI.h">
-      <Filter>SKSE</Filter>
-    </ClInclude>
     <ClInclude Include="QuickLoot.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\skse64\GameTypes.h">
-      <Filter>SKSE</Filter>
     </ClInclude>
     <ClInclude Include="GameFunctions.h">
       <Filter>Header Files</Filter>
@@ -82,10 +73,31 @@
     <ClCompile Include="..\skse64\GameData.cpp">
       <Filter>SKSE</Filter>
     </ClCompile>
-    <ClCompile Include="..\skse64\HashUtil.cpp">
+    <ClCompile Include="..\skse64\GameFormComponents.cpp">
       <Filter>SKSE</Filter>
     </ClCompile>
-    <ClCompile Include="..\skse64\GameFormComponents.cpp">
+    <ClCompile Include="..\skse64\GameSettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\ScaleformValue.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\ScaleformTypes.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\ScaleformAPI.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameMenus.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\ScaleformState.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameUtilities.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\HashUtil.cpp">
       <Filter>SKSE</Filter>
     </ClCompile>
   </ItemGroup>
