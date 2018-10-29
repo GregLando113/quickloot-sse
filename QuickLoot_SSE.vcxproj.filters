@@ -32,6 +32,9 @@
     <ClInclude Include="Flags.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GFxEvent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -98,6 +101,18 @@
       <Filter>SKSE</Filter>
     </ClCompile>
     <ClCompile Include="..\skse64\HashUtil.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\ScaleformLoader.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\Translation.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameStreams.cpp">
+      <Filter>SKSE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\skse64\GameEvents.cpp">
       <Filter>SKSE</Filter>
     </ClCompile>
   </ItemGroup>

@@ -6,7 +6,10 @@
 #include "skse64\Hooks_UI.h"
 #include "skse64\GameMenus.h"
 #include "skse64\GameSettings.h"
+#include "skse64\gamethreads.h"
 
+
+#include "GFxEvent.h"
 #include "Interfaces.h"
 #include "GameFunctions.h"
 #include "dbg.h"
@@ -15,8 +18,27 @@
 
 #define ForItems(type, container) for(UInt32 i = 0, type &it; i < container.count; ++i, it = container[i])
 
-SimpleLock QuickLoot::tlock_;
-QuickLoot g_quickloot;
+SimpleLock QuickLoot::tlock;
+QuickLoot* g_quickloot;
+
+class DelayedUpdater : public TaskDelegate
+{
+public:
+	virtual void Run() override
+	{
+		g_quickloot->Update();
+	}
+	virtual void Dispose() override
+	{
+	}
+
+	static void Register()
+	{
+		static DelayedUpdater singleton;
+		g_tasks->AddTask(&singleton);
+	}
+};
+
 
 class ExtraDroppedItemList : public BSExtraData
 {
@@ -25,13 +47,6 @@ public:
 	tList<UInt32>	handles;	// 08
 private:
 };
-
-GFxLoader * GetGfxSingleton()
-{
-	// 4E9F39D1066653EF254B38406212E476F80A6C9B+AE
-	RelocPtr<GFxLoader*> g_GFxLoader(0x02F3ECF8);
-	return *g_GFxLoader;
-}
 
 class LootMenuUIDelegate : public UIDelegate_v1
 {
@@ -48,24 +63,29 @@ public:
 
 	void Run() override
 	{
-		GFxMovieView *view = g_quickloot.menu->view;
+		if (g_quickloot)
+		{
+			GFxMovieView *view = g_quickloot->view;
 
-		char target[64];
-		strcpy_s(target, 64, "_root.Menu_mc");
-		strcat_s(target, target_);
+			char target[64];
+			strcpy_s(target, 64, "_root.Menu_mc");
+			strcat_s(target, target_);
 
-		std::vector<GFxValue> args;
-		(g_quickloot.*callback_)(args);
+			std::vector<GFxValue> args;
+			(g_quickloot->*callback_)(args);
 
-		if (args.empty())
-			view->Invoke(target, nullptr, nullptr, 0);
-		else
-			view->Invoke(target, nullptr, &args[0], args.size());
+			if (args.empty())
+				view->Invoke(target, nullptr, nullptr, 0);
+			else
+				view->Invoke(target, nullptr, &args[0], args.size());
+		}
+
 	}
 
 	void Dispose() override
 	{
-		Heap_Free(this);
+		if(this)
+			Heap_Free(this);
 	}
 
 	static void Queue(const char *target, FnCallback callback)
@@ -221,7 +241,7 @@ bool traverse(tArray<T>& arr,UInt32* idx, T** out)
 	return *idx < arr.count;
 }
 
-QuickLootMenu::QuickLootMenu(const char* swfPath)
+QuickLoot::QuickLoot(const char* swfPath)
 {
 	enum
 	{
@@ -243,27 +263,45 @@ QuickLootMenu::QuickLootMenu(const char* swfPath)
 		kType_Unk8000 = 0x8000,
 		kType_Unk10000 = 0x10000	// mouse cursor
 	};
+	auto crosshairrefdispatch = (EventDispatcher<SKSECrosshairRefEvent>*)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_CrosshairEvent);
+	crosshairrefdispatch->AddEventSink(dynamic_cast<BSTEventSink<SKSECrosshairRefEvent>*>(g_quickloot));
 
+	MenuManager *mm = MenuManager::GetSingleton();
+	mm->MenuOpenCloseEventDispatcher()->AddEventSink(dynamic_cast<BSTEventSink<MenuOpenCloseEvent>*>(g_quickloot));
 
-	auto mvloader = GetGfxSingleton();
-	if (!mvloader) D_MSG("mvloader == NULL"); else D_MSG("mvloader != NULL");
-	if (mvloader && CALL_MEMBER_FN(mvloader, LoadMovie)(this, &view, swfPath, 1, 1.0f))
+	//GetEventDispatcherList()->unk370.AddEventSink(&g_containerChangedEventHandler);
+
+	if (CALL_MEMBER_FN(GFxLoader::GetSingleton(), LoadMovie)(this, &view, swfPath, 1, 0.0))
 	{
-		_MESSAGE("  loaded Inteface/%s.swf successfully", swfPath);
+		IMenu::flags = 0x02 | 0x800 | 0x10000;
+		IMenu::unk0C = 2;
 
-		unk0C = 2;			// set this lower than that of Fader Menu (3)
-		flags = kType_DoNotDeleteOnClose | kType_DoNotPreventGameSave | kType_Unk10000;
+		//m_bNowTaking = false;
+		//m_bUpdateRequest = false;
+		//m_bOpenAnim = false;
+		//m_selectedIndex = -1;
+		//m_owner = nullptr;
+		//m_bTakeAll = false;
 	}
+	//auto mvloader = GetGfxSingleton();
+	//if (!mvloader) D_MSG("mvloader == NULL"); else D_MSG("mvloader != NULL");
+	//if (mvloader && CALL_MEMBER_FN(mvloader, LoadMovie)(this, &view, swfPath, 1, 1.0f))
+	//{
+	//	_MESSAGE("  loaded Inteface/%s.swf successfully", swfPath);
+
+	//	unk0C = 2;			// set this lower than that of Fader Menu (3)
+	//	flags = kType_DoNotDeleteOnClose | kType_DoNotPreventGameSave | kType_Unk10000;
+	//}
 }
 
-IMenu* QuickLootMenu::Create(void)
+IMenu* QuickLootMenuGen::Create(void)
 {
-	void* p = ScaleformHeap_Allocate(sizeof(IMenu));
+	D_MSG("QuickLootMenuGen::Create(void)");
+	void* p = ScaleformHeap_Allocate(sizeof(QuickLoot));
 	if (p)
 	{
-		IMenu* menu = new (p) QuickLootMenu("LootMenu");
-		g_quickloot.menu = menu;
-		return menu;
+		g_quickloot = new (p) QuickLoot("LootMenu");
+		return g_quickloot;
 	}
 	else
 	{
@@ -271,51 +309,174 @@ IMenu* QuickLootMenu::Create(void)
 	}
 }
 
+
+
 void
 QuickLoot::Initialize()
 {
-	auto crosshairrefdispatch = (EventDispatcher<SKSECrosshairRefEvent>*)g_messaging->GetEventDispatcher(SKSEMessagingInterface::kDispatcher_CrosshairEvent);
-	crosshairrefdispatch->AddEventSink(this);
-
+	D_MSG("QuickLoot::Initialize()");
 	MenuManager * mm = MenuManager::GetSingleton();
+	D_VAR(mm, "%p");
 	if (mm)
-		mm->Register("LootMenu", QuickLootMenu::Create);
+		mm->Register("LootMenu", QuickLootMenuGen::Create);
+}
+
+
+class GFxMovieDef
+{
+public: 
+	virtual UInt32		GetVersion() const = 0;
+	virtual UInt32		GetLoadingFrame() const = 0;
+	virtual float		GetWidth() const = 0;
+	virtual float		GetHeight() const = 0;
+	virtual UInt32		GetFrameCount() const = 0;
+	virtual float		GetFrameRate() const = 0;
+};
+
+void QuickLoot::Close()
+{
+	SimpleLocker lock(&tlock);
+
+	if (!containerRef)
+		return;
+
+	//if (containerRef_->formType != kFormType_Character)
+	//	PlayAnimationClose();
+
+	Clear();
+
+	if (menu && menu->view)
+		menu->view->Unk_08(false);
+}
+
+void QuickLoot::OnMenuOpen()
+{
+	SimpleLocker lock(&tlock);
+
+	//if (containerRef)	// is another container already opened ?
+	//{
+	//	if (containerRef->baseForm->formType == kFormType_Activator)
+	//	{
+	//		UInt32 refHandle = 0;
+	//		if (containerRef->extraData.GetAshPileRefHandle(refHandle) && refHandle != (*g_invalidRefHandle))
+	//		{
+	//			TESObjectREFR * refPtr = nullptr;
+	//			if (LookupREFRByHandle(&refHandle, &refPtr))
+	//				containerRef = refPtr;
+	//		}
+	//	}
+	//}
+
+	if (view)
+	{
+		selectedIndex = 0;
+
+		//RegisterMenuEventHandler(MenuControls::GetSingleton(), this);
+
+		Setup();
+		Update();
+
+		view->Unk_08(true);
+	}
+}
+
+void QuickLoot::OnMenuClose()
+{
+	SimpleLocker lock(&tlock);
+
+	if (view)
+	{
+
+		Clear();
+		view->Unk_08(false);
+
+		//RemoveMenuEventHandler(MenuControls::GetSingleton(), this);
+	}
+}
+
+void QuickLoot::Clear()
+{
+	SimpleLocker lock(&tlock);
+
+	ownerForm = nullptr;
+	selectedIndex = -1;
+
+	items.Clear();
+
+	flags.UnSet((UInt32)-1); // unset all flags
+}
+
+
+void
+QuickLoot::Setup()
+{
+	if (menu && menu->view)
+	{
+		GFxMovieDef *def = reinterpret_cast<GFxMovieDef *>(menu->view->Unk_01());
+
+		double x = -1;
+		double y = -1;
+		double scale = -1;
+		double opacity = 75;
+
+		x = (0 <= x && x <= 100) ? (x * def->GetWidth() * 0.01) : -1;
+		y = (0 <= y && y <= 100) ? (y * def->GetHeight() * 0.01) : -1;
+		if (scale >= 0)
+		{
+			if (scale < 25)
+				scale = 25;
+			else if (scale > 400)
+				scale = 400;
+		}
+		if (opacity >= 0)
+		{
+			if (opacity > 100)
+				opacity = 100;
+		}
+
+		GFxValue args[4];
+		args[0].SetNumber(x);
+		args[1].SetNumber(y);
+		args[2].SetNumber(scale);
+		args[3].SetNumber(opacity);
+		menu->view->Invoke("_root.Menu_mc.Setup", nullptr, args, 4);
+	}
 }
 
 void
 QuickLoot::Update()
 {
-	SimpleLocker lock(&tlock_);
+	SimpleLocker lock(&tlock);
 
-	if (flags_.GetAll(kQuickLoot_IsDisabled))
+	if (flags.GetAll(kQuickLoot_IsDisabled))
 	{
 		return;
 	}
 
-	D_VAR(items_.count, "%d");
+	D_VAR(items.count, "%d");
 	D_MSG("Quickloot::Update() START");
-	items_.count = 0;
+	items.count = 0;
 
-	D_VAR(items_.count, "%d");
+	D_VAR(items.count, "%d");
 
-	UInt32 numItems = TESObjectREFR_GetInventoryItemCount(containerRef_, false, false);
+	UInt32 numItems = TESObjectREFR_GetInventoryItemCount(containerRef, false, false);
 	D_VAR(numItems, "%d");
-	D_VAR(items_.capacity, "%d");
-	if (numItems > items_.capacity)
+	D_VAR(items.capacity, "%d");
+	if (numItems > items.capacity)
 	{
-		items_.Allocate(numItems);
-		items_.count = 0;
+		items.Allocate(numItems);
+		items.count = 0;
 	}
 
 	
-	ownerForm_ = nullptr;
-	if (containerRef_->GetFormType() != kFormType_Character)
+	ownerForm = nullptr;
+	if (containerRef->GetFormType() != kFormType_Character)
 	{
-		ownerForm_ = TESForm_GetOwner(containerRef_);
-		D_VAR(ownerForm_, "%p");
+		ownerForm = TESForm_GetOwner(containerRef);
+		D_VAR(ownerForm, "%p");
 	}
 	
-	TESContainer* baseContainer = DYNAMIC_CAST(containerRef_->baseForm, TESForm, TESContainer);
+	TESContainer* baseContainer = DYNAMIC_CAST(containerRef->baseForm, TESForm, TESContainer);
 	ASSERT(baseContainer);
 	/*if (containerRef_->baseForm->GetFormType() == kFormType_Container)
 		container = &dynamic_cast<TESObjectCONT*>(containerRef_->baseForm)->container;
@@ -343,28 +504,28 @@ QuickLoot::Update()
 		D_MSG("DEFAULT item %d [%p] = %d", i, entry->form, entry->count);
 	}
 	D_MSG(" === DEFAULT ITEM END");
-	D_VAR(items_.count, "%d");
+	D_VAR(items.count, "%d");
 	//================================
 	// changes
 
 	//================================
-	ExtraContainerChanges* exChanges = reinterpret_cast<ExtraContainerChanges*>(containerRef_->extraData.GetByType(kExtraData_ContainerChanges));
+	ExtraContainerChanges* exChanges = reinterpret_cast<ExtraContainerChanges*>(containerRef->extraData.GetByType(kExtraData_ContainerChanges));
 	ExtraContainerChanges::Data* changes = (exChanges) ? exChanges->data : nullptr;
 	
 	if (!changes)
 	{
 		_MESSAGE("FORCES CONTAINER TO SPAWN");
-		_MESSAGE("  %p [%s]\n", containerRef_->formID, CALL_MEMBER_FN(containerRef_,GetReferenceName)());
+		_MESSAGE("  %p [%s]\n", containerRef->formID, CALL_MEMBER_FN(containerRef,GetReferenceName)());
 
 		changes = (ExtraContainerChanges::Data*)Heap_Allocate(sizeof(ExtraContainerChanges::Data));
-		ECCData_ctor(changes, containerRef_);
-		BaseExtraList_SetInventoryChanges(&(containerRef_->extraData), changes);
+		ECCData_ctor(changes, containerRef);
+		BaseExtraList_SetInventoryChanges(&(containerRef->extraData), changes);
 		ECCData_InitContainer(changes);
 	}
-	D_VAR(items_.count, "%d");
+	D_VAR(items.count, "%d");
 
 	D_MSG(" === CHANGES START");
-	if (changes->objList)
+	if (changes && changes->objList)
 	{
 		D_VAR(changes->objList->Count(), "%d");
 		for(auto it = changes->objList->Begin(); !it.End(); ++it)
@@ -375,7 +536,7 @@ QuickLoot::Update()
 				continue;
 
 			TESForm *item = pEntry->type;
-			if (!IsValidItem(item))
+			if (!item || !IsValidItem(item))
 			{
 				D_MSG("pEntryInvalid!");
 				continue;
@@ -449,7 +610,7 @@ QuickLoot::Update()
 					if (pNewEntry)
 					{
 						
-						items_.Push(ItemData(pNewEntry,ownerForm_)); //emplace_back(pNewEntry, ownerForm_);
+						items.Push(ItemData(pNewEntry,ownerForm)); //emplace_back(pNewEntry, ownerForm_);
 					}
 				}
 				D_MSG(" ========== extendDataList END");
@@ -465,7 +626,7 @@ QuickLoot::Update()
 
 			if (defaultEntry)
 			{
-				items_.Push(ItemData(defaultEntry, ownerForm_));
+				items.Push(ItemData(defaultEntry, ownerForm));
 			}
 		}
 	}
@@ -489,7 +650,7 @@ QuickLoot::Update()
 
 			InventoryEntryData *entry = InventoryEntryData::Create(item, count);
 
-			items_.Push(ItemData(entry, ownerForm_));
+			items.Push(ItemData(entry, ownerForm));
 
 		}
 	}
@@ -498,7 +659,7 @@ QuickLoot::Update()
 	// dropped items
 	//================================
 	D_MSG(" === DROPPED ITEM BEGIN");
-	ExtraDroppedItemList *exDroppedItemList = reinterpret_cast<ExtraDroppedItemList*>(containerRef_->extraData.GetByType(kExtraData_DroppedItemList));
+	ExtraDroppedItemList *exDroppedItemList = reinterpret_cast<ExtraDroppedItemList*>(containerRef->extraData.GetByType(kExtraData_DroppedItemList));
 	if (exDroppedItemList)
 	{
 		D_VAR(exDroppedItemList->handles.Count(), "%d");
@@ -521,7 +682,7 @@ QuickLoot::Update()
 
 			InventoryEntryData *entry = InventoryEntryData::Create(refPtr->baseForm, 1);
 			AddEntryList(entry, const_cast<BaseExtraList*>(&refPtr->extraData));
-			items_.Push(ItemData(entry, ownerForm_));
+			items.Push(ItemData(entry, ownerForm));
 		}
 	}
 	D_MSG(" === DROPPED ITEM END");
@@ -530,7 +691,7 @@ QuickLoot::Update()
 	Dbg_PrintItems();
 #endif
 	D_MSG(" === END ITEMS PRE SORT");
-	if (items_.count != 0)
+	if (items.count != 0)
 	{
 		D_MSG("=== SORT BEGIN");
 		//Sort();
@@ -544,7 +705,7 @@ QuickLoot::Update()
 #if 1
 	InvokeScaleform_Open();
 
-	flags_.Set(kQuickLoot_RequestUpdate);
+	flags.Set(kQuickLoot_RequestUpdate);
 #endif
 
 	D_MSG("QuickLoot::Update() END");
@@ -554,7 +715,7 @@ void
 QuickLoot::Sort()
 {
 	
-	qsort(items_.entries, items_.count, sizeof(ItemData), [](const void *pA, const void *pB) -> int {
+	qsort(items.entries, items.count, sizeof(ItemData), [](const void *pA, const void *pB) -> int {
 
 		if (!pA)
 			return -1;
@@ -577,11 +738,11 @@ void
 QuickLoot::Dbg_PrintItems()
 {
 	_MESSAGE("=== DUMP CONTAINER ===");
-	_MESSAGE("%p [%s] numItems=%d owner=%p", containerRef_->formID, CALL_MEMBER_FN(containerRef_,GetReferenceName)(), items_.count, (ownerForm_ ? ownerForm_->formID : 0));
+	_MESSAGE("%p [%s] numItems=%d owner=%p", containerRef->formID, CALL_MEMBER_FN(containerRef,GetReferenceName)(), items.count, (ownerForm ? ownerForm->formID : 0));
 
 	ItemData* it;
 	UInt32 idx = 0;
-	while(traverse(items_,&idx, &it))
+	while(traverse(items,&idx, &it))
 	{
 		InventoryEntryData *pEntry = it->pEntry;
 		TESForm *form = pEntry ? pEntry->type : nullptr;
@@ -599,16 +760,101 @@ QuickLoot::Dbg_PrintItems()
 	_MESSAGE("=== END DUMP CONTAINER ===");
 }
 
+void QuickLoot::SetIndex(SInt32 index)
+{
+	SimpleLocker lock(&tlock);
+
+	if (containerRef)
+	{
+		const int tail = items.count - 1;
+		selectedIndex += index;
+		if (selectedIndex > tail)
+			selectedIndex = tail;
+		else if (selectedIndex < 0)
+			selectedIndex = 0;
+
+		InvokeScaleform_SetIndex();
+	}
+
+}
+
+UInt32 QuickLoot::ProcessMessage(UIMessage * message)
+{
+	UInt32 result = 2;
+
+	struct QLBSUIScaleformData
+	{
+		virtual ~QLBSUIScaleformData() {}
+
+		//	void	** _vtbl;		// 00
+		UInt32				unk04; // 04
+		GFxEvent*              event;
+
+	};
+
+	if (view)
+	{
+		switch (message->message)
+		{
+		case UIMessage::kMessage_Open:
+			OnMenuOpen();
+			break;
+		case UIMessage::kMessage_Close:
+			OnMenuClose();
+			break;
+		case 6: // kMessage_Scaleform
+			if (view->Unk_09() && message->objData)
+			{
+				QLBSUIScaleformData *scaleformData = (QLBSUIScaleformData *)message->objData;
+
+				GFxEvent *event = scaleformData->event;
+
+				if (event->type == GFxEvent::MouseWheel)
+				{
+					GFxMouseEvent *mouse = (GFxMouseEvent *)event;
+					if (mouse->scrollDelta > 0)
+						SetIndex(-1);
+					else if (mouse->scrollDelta < 0)
+						SetIndex(1);
+				}
+				else if (event->type == GFxEvent::KeyDown)
+				{
+					GFxKeyEvent *key = (GFxKeyEvent *)event;
+					if (key->keyCode == GFxKey::Up)
+						SetIndex(-1);
+					else if (key->keyCode == GFxKey::Down)
+						SetIndex(1);
+				}
+				else if (event->type == GFxEvent::CharEvent)
+				{
+					GFxCharEvent *charEvent = (GFxCharEvent *)event;
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
 void
 QuickLoot::InvokeScaleform_Open()
 {
-	if (selectedIndex_ >= items_.count)
+	if (items.count == 0)
 	{
-		selectedIndex_ = items_.count - 1;
+		//menu->view->Invoke("_root.Menu_mc.openContainer", nullptr, nullptr, 0);
+		//InvokeScaleform_SetContainer();
+
+		//CALL_MEMBER_FN((*g_thePlayer), OnCrosshairRefChanged)();
+
+		return;
 	}
-	else if (selectedIndex_ < 0)
+	if (selectedIndex >= items.count)
 	{
-		selectedIndex_ = 0;
+		selectedIndex = items.count - 1;
+	}
+	else if (selectedIndex < 0)
+	{
+		selectedIndex = 0;
 	}
 	LootMenuUIDelegate::Queue(".openContainer", &QuickLoot::SetScaleformArgs_Open);
 }
@@ -628,7 +874,7 @@ QuickLoot::InvokeScaleform_SetIndex()
 void 
 QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
 {
-	SimpleLocker guard(&tlock_);
+	SimpleLocker guard(&tlock);
 
 	static char *sSteal = (*g_gameSettingCollection)->Get("sSteal")->data.s;
 	static char *sTake = (*g_gameSettingCollection)->Get("sTake")->data.s;
@@ -636,19 +882,19 @@ QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
 	GFxValue argItems;
 	menu->view->CreateArray(&argItems);
 	GFxValue argRefID; // = (double)m_targetRef->formID;
-	argRefID.SetNumber(targetRef_->formID);
+	argRefID.SetNumber(targetRef->formID);
 	GFxValue argTitle;
-	argTitle.SetString(CALL_MEMBER_FN(targetRef_, GetReferenceName)());
+	argTitle.SetString(CALL_MEMBER_FN(targetRef, GetReferenceName)());
 	GFxValue argTake;
-	argTake.SetString((CALL_MEMBER_FN(targetRef_, IsOffLimits)()) ? sSteal : sTake);
+	argTake.SetString((CALL_MEMBER_FN(targetRef, IsOffLimits)()) ? sSteal : sTake);
 	GFxValue argSearch;
 	argSearch.SetString((*g_gameSettingCollection)->Get("sSearch")->data.s);
 	GFxValue argSelectedIndex;
-	argSelectedIndex.SetNumber((double)selectedIndex_);
+	argSelectedIndex.SetNumber((double)selectedIndex);
 
-	for(UInt32 i = 0; i < items_.count; ++i)
+	for(UInt32 i = 0; i < items.count; ++i)
 	{
-		ItemData& itemData = items_[i];
+		ItemData& itemData = items[i];
 		GFxValue text;
 		argTitle.SetString(itemData.GetName());
 		GFxValue count;
@@ -704,42 +950,15 @@ QuickLoot::SetScaleformArgs_Open(std::vector<GFxValue>& args)
 void 
 QuickLoot::SetScaleformArgs_Close(std::vector<GFxValue>& args)
 {
-	SimpleLocker guard(&tlock_);
+	SimpleLocker guard(&tlock);
 }
 
 void 
 QuickLoot::SetScaleformArgs_SetIndex(std::vector<GFxValue>& args)
 {
-	SimpleLocker guard(&tlock_);
+	SimpleLocker guard(&tlock);
 	args.reserve(1);
 	GFxValue idx;
-	idx.SetNumber((double)selectedIndex_);
+	idx.SetNumber((double)selectedIndex);
 	args.push_back(idx);
-}
-
-EventResult 
-QuickLoot::ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrosshairRefEvent> * dispatcher)
-{
-	TESObjectREFR* ref = evn->crosshairRef;
-	if (ref)
-	{
-		EVENT_REQUIRE(ref->baseForm);
-
-
-		printf("SKSECrosshairRefEvent: (%s) form=%p type:%d\n", CALL_MEMBER_FN(ref, GetReferenceName)(), ref, ref->baseForm->formType);
-
-		EVENT_REQUIRE(ref->baseForm->formType == kFormType_Container ||
-					  ref->baseForm->formType == kFormType_NPC);
-
-		containerRef_ = ref;
-
-		_MESSAGE(" = START UPDATE");
-		Update();
-		_MESSAGE(" = END UPDATE");
-	}
-	else
-	{
-		printf("SKSECrosshairRefEvent: CLEAR\n");
-	}
-	return kEvent_Continue;
 }

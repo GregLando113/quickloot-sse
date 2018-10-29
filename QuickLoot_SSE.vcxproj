@@ -160,6 +160,7 @@
     <ClInclude Include="dbg.h" />
     <ClInclude Include="Flags.h" />
     <ClInclude Include="GameFunctions.h" />
+    <ClInclude Include="GFxEvent.h" />
     <ClInclude Include="ItemData.h" />
     <ClInclude Include="QuickLoot.h" />
     <ClInclude Include="Interfaces.h" />
@@ -168,6 +169,7 @@
     <ClCompile Include="..\skse64\GameAPI.cpp" />
     <ClCompile Include="..\skse64\GameBSExtraData.cpp" />
     <ClCompile Include="..\skse64\GameData.cpp" />
+    <ClCompile Include="..\skse64\GameEvents.cpp" />
     <ClCompile Include="..\skse64\GameExtraData.cpp" />
     <ClCompile Include="..\skse64\GameFormComponents.cpp" />
     <ClCompile Include="..\skse64\GameForms.cpp" />
@@ -175,14 +177,17 @@
     <ClCompile Include="..\skse64\GameReferences.cpp" />
     <ClCompile Include="..\skse64\GameRTTI.cpp" />
     <ClCompile Include="..\skse64\GameSettings.cpp" />
+    <ClCompile Include="..\skse64\GameStreams.cpp" />
     <ClCompile Include="..\skse64\GameTypes.cpp" />
     <ClCompile Include="..\skse64\GameUtilities.cpp" />
     <ClCompile Include="..\skse64\HashUtil.cpp" />
     <ClCompile Include="..\skse64\NiNodes.cpp" />
     <ClCompile Include="..\skse64\ScaleformAPI.cpp" />
+    <ClCompile Include="..\skse64\ScaleformLoader.cpp" />
     <ClCompile Include="..\skse64\ScaleformState.cpp" />
     <ClCompile Include="..\skse64\ScaleformTypes.cpp" />
     <ClCompile Include="..\skse64\ScaleformValue.cpp" />
+    <ClCompile Include="..\skse64\Translation.cpp" />
     <ClCompile Include="GameFunctions.cpp" />
     <ClCompile Include="ItemData.cpp" />
     <ClCompile Include="QuickLoot.cpp" />

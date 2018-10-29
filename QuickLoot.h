@@ -14,29 +14,52 @@
 #include "Flags.h"
 
 
-class QuickLootMenu
-	: public IMenu
-{
-public:
 
-	static IMenu* Create(void);
-	QuickLootMenu(const char* swfPath);
+enum
+{
+	kQuickLoot_IsOpen = (1 << 0),
+	kQuickLoot_IsDisabled = (1 << 1),
+	kQuickLoot_RequestUpdate = (1 << 2),
+	kQuickLoot_OpenAnimation = (1 << 3),
+	kQuickLoot_NowTaking = (1 << 4)
 };
 
-class QuickLoot
-	: public BSTEventSink<SKSECrosshairRefEvent>
+struct QuickLootMenuGen
 {
-public:
+	static IMenu* Create(void);
+};
 
-	void Initialize();
+struct QuickLoot
+	: public IMenu
+{
 
+
+	QuickLoot(const char* swfPath);
+
+	static void Initialize();
+
+
+	void Close();
+
+	void Setup();
 	void Update();
 	void Sort();
+
+
+	void OnMenuOpen();
+	void OnMenuClose();
+	void Clear();
+
+	void SetIndex(SInt32 index);
 
 	void Dbg_PrintItems();
 
 	IMenu*             menu;
-private:
+	Flags<UInt32>	  flags;
+
+	static SimpleLock tlock;
+
+	virtual UInt32 ProcessMessage(UIMessage * message) override;
 
 	void InvokeScaleform_Open();
 	void InvokeScaleform_Close();
@@ -45,25 +68,13 @@ private:
 	void SetScaleformArgs_Close(std::vector<GFxValue> &args);
 	void SetScaleformArgs_SetIndex(std::vector<GFxValue> &args);
 
-	EventResult ReceiveEvent(SKSECrosshairRefEvent * evn, EventDispatcher<SKSECrosshairRefEvent> * dispatcher) override;
+	TESObjectREFR*    targetRef;
+	TESObjectREFR*	  containerRef;
+	TESForm*          ownerForm;
+	tArray<ItemData>  items;
+	SInt32	          selectedIndex;
 
-
-	TESObjectREFR*    targetRef_;
-	TESObjectREFR*	  containerRef_;
-	TESForm*          ownerForm_;
-	tArray<ItemData>  items_;
-	SInt32	          selectedIndex_;
-	Flags<UInt32>	  flags_;
-
-	static SimpleLock tlock_;
-
-	enum
-	{
-		kQuickLoot_IsOpen        = (1 << 0),
-		kQuickLoot_IsDisabled    = (1 << 1),
-		kQuickLoot_RequestUpdate = (1 << 2)
-	};
 };
 
 
-extern QuickLoot g_quickloot;
+extern QuickLoot* g_quickloot;
